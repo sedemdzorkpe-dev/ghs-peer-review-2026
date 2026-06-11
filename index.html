@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHS Peer Review Assessment Tool – Greater Accra</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --ghs-green: #006633;
+  --ghs-gold: #F4A900;
+  --ghs-dark: #1a2332;
+  --ghs-mid: #2c3e50;
+  --ghs-light: #f0f4f0;
+  --ghs-white: #ffffff;
+  --accent-blue: #1565C0;
+  --danger: #c62828;
+  --warning: #f57c00;
+  --success: #2e7d32;
+  --border: #d0dcd0;
+  --text-main: #1a2332;
+  --text-muted: #5a6a7a;
+  --shadow: 0 2px 12px rgba(0,102,51,0.10);
+  --shadow-lg: 0 8px 32px rgba(0,102,51,0.15);
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: 'Inter', sans-serif; background: var(--ghs-light); color: var(--text-main); min-height: 100vh; }
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── CONFIG SCREEN ── */
+#configScreen { background: linear-gradient(135deg, #00441f 0%, #006633 60%, #1a8c4a 100%); align-items: center; justify-content: center; }
+.config-card { background: white; border-radius: var(--radius-lg); padding: 40px 48px; width: 100%; max-width: 520px; box-shadow: 0 24px 64px rgba(0,0,0,0.35); }
+.config-card h2 { font-family: 'Playfair Display', serif; color: var(--ghs-green); font-size: 1.6rem; margin-bottom: 8px; }
+.config-card p { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px; }
+.config-card label { display: block; font-weight: 600; font-size: 0.82rem; color: var(--text-main); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+.config-card input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 7px; font-size: 0.88rem; font-family: 'Inter', sans-serif; margin-bottom: 14px; }
+.config-card input:focus { outline: none; border-color: var(--ghs-green); }
+.btn-primary { background: var(--ghs-green); color: white; border: none; border-radius: 7px; padding: 12px 24px; font-size: 0.92rem; font-weight: 600; cursor: pointer; width: 100%; transition: background 0.2s; }
+.btn-primary:hover { background: #004d26; }
+.note-box { background: #e8f5e9; border-left: 3px solid var(--ghs-green); padding: 12px 16px; border-radius: 6px; font-size: 0.78rem; color: #2e5c3a; margin-top: 14px; line-height: 1.6; }
+
+/* ── LOGIN ── */
+#loginScreen { background: linear-gradient(135deg, #00441f 0%, #006633 55%, #004d26 100%); align-items: center; justify-content: center; padding: 20px; }
+.login-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 430px; }
+.login-logo-area { text-align: center; margin-bottom: 20px; }
+.login-logo { width: 90px; height: 90px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); overflow: hidden; }
+.login-logo svg { width: 60px; height: 60px; }
+.login-logo-area h1 { color: white; font-family: 'Playfair Display', serif; font-size: 1.45rem; margin-bottom: 2px; }
+.login-logo-area p { color: rgba(255,255,255,0.75); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.login-card { background: white; border-radius: var(--radius-lg); padding: 36px 40px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-card h2 { font-size: 1.2rem; font-weight: 700; color: var(--ghs-dark); margin-bottom: 20px; text-align: center; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-weight: 600; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.form-group input, .form-group select { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 7px; font-size: 0.9rem; font-family: 'Inter', sans-serif; color: var(--text-main); }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--ghs-green); }
+.login-error { color: var(--danger); font-size: 0.82rem; text-align: center; margin-top: 10px; padding: 8px; background: #ffebee; border-radius: 6px; }
+.role-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.role-badge { background: #e8f5e9; color: var(--ghs-green); font-size: 0.73rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+
+/* ── APP SHELL ── */
+#appScreen { background: var(--ghs-light); }
+.topbar { background: var(--ghs-green); color: white; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar-logo { width: 36px; height: 36px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.topbar-logo svg { width: 22px; height: 22px; }
+.topbar-title { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.01em; }
+.topbar-subtitle { font-size: 0.72rem; opacity: 0.75; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.user-chip { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; }
+.user-chip .dot { width: 8px; height: 8px; background: var(--ghs-gold); border-radius: 50%; }
+.btn-logout { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 500; transition: background 0.2s; }
+.btn-logout:hover { background: rgba(255,255,255,0.25); }
+.facility-banner { background: linear-gradient(90deg, var(--ghs-dark) 0%, var(--ghs-mid) 100%); color: white; padding: 10px 24px; display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
+.facility-name { font-weight: 700; font-size: 1rem; }
+.facility-meta { opacity: 0.7; font-size: 0.78rem; }
+.status-live { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 0.78rem; }
+.pulse { width: 8px; height: 8px; background: #4caf50; border-radius: 50%; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
+
+.main-content { flex: 1; display: flex; overflow: hidden; }
+.sidebar { width: 240px; background: white; border-right: 1px solid var(--border); padding: 16px 0; overflow-y: auto; flex-shrink: 0; }
+.sidebar-section { padding: 8px 16px; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+.nav-item:hover { background: #f0f7f0; color: var(--ghs-green); border-left-color: #9ed49e; }
+.nav-item.active { background: #e8f5e9; color: var(--ghs-green); border-left-color: var(--ghs-green); font-weight: 600; }
+.nav-item .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+.nav-score-pill { margin-left: auto; background: var(--ghs-green); color: white; font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+.nav-score-pill.partial { background: var(--warning); }
+.nav-score-pill.empty { background: #bbb; }
+
+.content-area { flex: 1; overflow-y: auto; padding: 0; }
+
+/* ── VIEW PANELS ── */
+.view-panel { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+.view-panel.active { display: block; }
+
+/* ── MODULE ASSESSMENT ── */
+.module-header { background: white; border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.module-header h2 { font-family: 'Playfair Display', serif; color: var(--ghs-green); font-size: 1.3rem; }
+.module-score-summary { display: flex; gap: 24px; }
+.score-stat { text-align: center; }
+.score-stat .val { font-size: 1.5rem; font-weight: 700; color: var(--ghs-green); }
+.score-stat .lbl { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.score-ring { width: 60px; height: 60px; position: relative; }
+.score-ring svg { transform: rotate(-90deg); }
+.score-ring .pct-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.75rem; font-weight: 700; color: var(--ghs-green); }
+
+.section-card { background: white; border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; box-shadow: var(--shadow); border-left: 4px solid var(--border); transition: border-color 0.2s; }
+.section-card.has-score { border-left-color: var(--ghs-green); }
+.section-title { font-weight: 700; color: var(--ghs-dark); margin-bottom: 4px; font-size: 0.95rem; }
+.section-meta { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px; }
+.item-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f4f0; }
+.item-row:last-child { border-bottom: none; padding-bottom: 0; }
+.item-info { flex: 1; }
+.item-code { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.item-name { font-size: 0.88rem; font-weight: 600; color: var(--text-main); margin-bottom: 2px; }
+.item-criteria { font-size: 0.77rem; color: var(--text-muted); line-height: 1.5; }
+.item-score-area { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 100px; }
+.item-score-area label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; text-align: center; }
+.score-input-wrap { position: relative; }
+.score-input { width: 80px; padding: 8px 8px; border: 2px solid var(--border); border-radius: 7px; font-size: 1rem; font-weight: 700; text-align: center; font-family: 'Inter', sans-serif; color: var(--ghs-green); transition: border-color 0.2s; }
+.score-input:focus { outline: none; border-color: var(--ghs-green); }
+.score-input.entered { border-color: var(--ghs-green); background: #f0fff4; }
+.max-score-label { font-size: 0.72rem; color: var(--text-muted); }
+.save-indicator { font-size: 0.7rem; color: var(--success); opacity: 0; transition: opacity 0.5s; }
+.save-indicator.show { opacity: 1; }
+.btn-save-section { background: var(--ghs-green); color: white; border: none; border-radius: 7px; padding: 10px 24px; font-size: 0.88rem; font-weight: 600; cursor: pointer; margin-top: 16px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+.btn-save-section:hover { background: #004d26; }
+.btn-save-section:disabled { background: #9cc4a0; cursor: not-allowed; }
+
+/* ── DASHBOARD / HQ ── */
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: white; border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px; }
+.kpi-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.kpi-value { font-size: 2rem; font-weight: 700; }
+.kpi-value.green { color: var(--success); }
+.kpi-value.orange { color: var(--warning); }
+.kpi-value.red { color: var(--danger); }
+.kpi-value.blue { color: var(--accent-blue); }
+.kpi-sub { font-size: 0.8rem; color: var(--text-muted); }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-card { background: white; border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); }
+.chart-card h3 { font-size: 0.92rem; font-weight: 700; color: var(--ghs-dark); margin-bottom: 16px; }
+.chart-wrap { position: relative; height: 220px; }
+.facilities-table { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 24px; }
+.table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.table-header h3 { font-size: 0.95rem; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: var(--ghs-light); padding: 11px 14px; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+tbody td { padding: 12px 14px; border-bottom: 1px solid #f4f7f4; font-size: 0.85rem; }
+tbody tr:hover { background: #f8fdf8; }
+.performance-bar { height: 8px; background: #e8eee8; border-radius: 4px; overflow: hidden; }
+.performance-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.perf-high { background: var(--success); }
+.perf-mid { background: var(--warning); }
+.perf-low { background: var(--danger); }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
+.badge-high { background: #e8f5e9; color: var(--success); }
+.badge-mid { background: #fff3e0; color: var(--warning); }
+.badge-low { background: #ffebee; color: var(--danger); }
+.live-feed { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.live-feed-header { background: var(--ghs-dark); color: white; padding: 12px 18px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.88rem; }
+.feed-item { padding: 10px 18px; border-bottom: 1px solid #f0f4f0; display: flex; align-items: center; gap: 12px; font-size: 0.82rem; }
+.feed-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── ADMIN ── */
+.admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.admin-card { background: white; border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); }
+.admin-card h3 { font-weight: 700; font-size: 0.95rem; color: var(--ghs-dark); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+.admin-card h3 span { font-size: 1.1rem; }
+.users-list { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+.user-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--ghs-light); border-radius: 8px; }
+.user-avatar { width: 36px; height: 36px; background: var(--ghs-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.user-info { flex: 1; }
+.user-name { font-weight: 600; font-size: 0.88rem; }
+.user-email { font-size: 0.75rem; color: var(--text-muted); }
+.user-role-tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.role-admin { background: #e3f2fd; color: #1565c0; }
+.role-supervisor { background: #f3e5f5; color: #6a1b9a; }
+.role-assessor { background: #e8f5e9; color: #2e7d32; }
+.role-hq { background: #fff3e0; color: #e65100; }
+.btn-danger { background: var(--danger); color: white; border: none; border-radius: 6px; padding: 5px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
+.btn-secondary { background: white; color: var(--text-main); border: 1.5px solid var(--border); border-radius: 7px; padding: 9px 18px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: border-color 0.2s; }
+.btn-secondary:hover { border-color: var(--ghs-green); }
+
+/* ── MODALS ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: var(--radius-lg); padding: 32px 36px; max-width: 520px; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.25); }
+.modal h3 { font-family: 'Playfair Display', serif; color: var(--ghs-green); font-size: 1.3rem; margin-bottom: 6px; }
+.modal p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+.modal-footer { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
+.modal-footer .btn-primary { width: auto; }
+
+/* ── SCORECARD ── */
+.scorecard-wrap { background: white; border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.scorecard-header { display: flex; align-items: flex-start; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid var(--ghs-light); margin-bottom: 20px; }
+.scorecard-logo { width: 60px; height: 60px; flex-shrink: 0; }
+.scorecard-title h2 { font-family: 'Playfair Display', serif; color: var(--ghs-green); font-size: 1.4rem; }
+.scorecard-title p { font-size: 0.82rem; color: var(--text-muted); }
+.overall-score-circle { width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(var(--ghs-green) 0%, #e8eee8 0%); display: flex; flex-direction: column; align-items: center; justify-content: center; margin-left: auto; position: relative; }
+.overall-score-inner { width: 82px; height: 82px; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; }
+.overall-score-inner .pct { font-size: 1.3rem; font-weight: 700; color: var(--ghs-green); }
+.overall-score-inner .lbl { font-size: 0.62rem; color: var(--text-muted); }
+.module-scores-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.module-score-card { padding: 14px 16px; background: var(--ghs-light); border-radius: 8px; }
+.module-score-card .m-name { font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
+.module-score-card .m-bar { height: 6px; background: #dde8dd; border-radius: 3px; margin-bottom: 6px; overflow: hidden; }
+.module-score-card .m-fill { height: 100%; border-radius: 3px; }
+.module-score-card .m-pct { font-size: 0.72rem; color: var(--text-muted); }
+
+/* FACILITY SELECTOR */
+.facility-selector { background: white; border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); margin-bottom: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.facility-selector select { border: 1.5px solid var(--border); border-radius: 7px; padding: 8px 12px; font-size: 0.88rem; min-width: 220px; font-family: 'Inter', sans-serif; }
+.facility-selector select:focus { outline: none; border-color: var(--ghs-green); }
+
+/* SETUP SCREEN */
+.setup-welcome { text-align: center; padding: 40px; }
+.setup-welcome h2 { font-family: 'Playfair Display', serif; color: var(--ghs-green); font-size: 2rem; margin-bottom: 12px; }
+.setup-welcome p { color: var(--text-muted); font-size: 0.95rem; max-width: 500px; margin: 0 auto 28px; }
+.setup-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 900px; margin: 0 auto; }
+.setup-step { background: white; border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); text-align: center; }
+.setup-step-icon { font-size: 2rem; margin-bottom: 10px; }
+.setup-step h4 { font-weight: 700; color: var(--ghs-dark); margin-bottom: 6px; font-size: 0.92rem; }
+.setup-step p { font-size: 0.8rem; color: var(--text-muted); }
+
+/* SUPERVISOR LIVE VIEW */
+.live-module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.live-module-tile { background: white; border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); cursor: pointer; transition: box-shadow 0.2s; border-left: 4px solid var(--border); }
+.live-module-tile:hover { box-shadow: var(--shadow-lg); }
+.live-module-tile.done { border-left-color: var(--success); }
+.live-module-tile.partial { border-left-color: var(--warning); }
+.live-module-tile .tile-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.live-module-tile .tile-name { font-weight: 700; font-size: 0.85rem; color: var(--ghs-dark); }
+.live-module-tile .tile-assessor { font-size: 0.72rem; color: var(--text-muted); }
+.live-module-tile .tile-score { font-size: 1.4rem; font-weight: 700; }
+.live-module-tile .tile-bar { height: 5px; background: #e8eee8; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.live-module-tile .tile-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chart-row, .admin-grid { grid-template-columns: 1fr; }
+  .live-module-grid, .module-scores-grid { grid-template-columns: repeat(2, 1fr); }
+  .sidebar { width: 200px; }
+  .topbar-title { font-size: 0.82rem; }
+  .view-panel { padding: 14px; }
+}
+@media (max-width: 600px) {
+  .sidebar { display: none; }
+  .live-module-grid, .module-scores-grid { grid-template-columns: 1fr; }
+}
+
+/* TOAST */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { background: var(--ghs-dark); color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 500; animation: slideIn 0.3s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+@keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Config screen logo */
+.config-ghs-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 2px solid #f0f0f0; }
+.config-ghs-logo svg { width: 56px; height: 56px; flex-shrink: 0; }
+.config-ghs-logo-text h3 { font-family: 'Playfair Display', serif; color: var(--ghs-green); font-size: 1.1rem; }
+.config-ghs-logo-text p { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ CONFIG SCREEN ═══════════════════════ -->
+<div id="configScreen" class="screen active">
+  <div class="config-card">
+    <div class="config-ghs-logo">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="48" fill="#006633"/>
+        <text x="50" y="42" text-anchor="middle" fill="white" font-size="11" font-family="serif" font-weight="bold">GHANA</text>
+        <text x="50" y="54" text-anchor="middle" fill="white" font-size="9" font-family="serif">HEALTH</text>
+        <text x="50" y="65" text-anchor="middle" fill="white" font-size="9" font-family="serif">SERVICE</text>
+        <circle cx="50" cy="25" r="7" fill="#F4A900"/>
+        <line x1="50" y1="18" x2="50" y2="32" stroke="white" stroke-width="1.5"/>
+        <line x1="43" y1="25" x2="57" y2="25" stroke="white" stroke-width="1.5"/>
+      </svg>
+      <div class="config-ghs-logo-text">
+        <h3>Ghana Health Service</h3>
+        <p>Peer Review Assessment Tool 2026</p>
+      </div>
+    </div>
+    <h2>One-Time Setup</h2>
+    <p>Connect your Firebase project for live data transmission. This is done once by your administrator.</p>
+
+    <label>Firebase API Key</label>
+    <input type="text" id="cfg_apiKey" placeholder="AIzaSy...">
+    <label>Auth Domain</label>
+    <input type="text" id="cfg_authDomain" placeholder="your-project.firebaseapp.com">
+    <label>Project ID</label>
+    <input type="text" id="cfg_projectId" placeholder="your-project-id">
+    <label>App ID</label>
+    <input type="text" id="cfg_appId" placeholder="1:123456:web:abc...">
+
+    <button class="btn-primary" onclick="initFirebase()">Initialize & Save Configuration</button>
+    <div class="note-box">
+      <strong>Setup Instructions:</strong><br>
+      1. Create a Firebase project at <strong>console.firebase.google.com</strong><br>
+      2. Enable <strong>Authentication</strong> (Email/Password) and <strong>Firestore Database</strong><br>
+      3. Copy your Web App credentials above and click Initialize<br>
+      4. After saving, the admin will create all user accounts from within the app<br>
+      5. Host this file on <strong>GitHub Pages</strong> for any browser access
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ LOGIN SCREEN ═══════════════════════ -->
+<div id="loginScreen" class="screen">
+  <div class="login-wrap">
+    <div class="login-logo-area">
+      <div class="login-logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#006633"/>
+          <text x="50" y="42" text-anchor="middle" fill="white" font-size="11" font-family="serif" font-weight="bold">GHANA</text>
+          <text x="50" y="54" text-anchor="middle" fill="white" font-size="9" font-family="serif">HEALTH</text>
+          <text x="50" y="65" text-anchor="middle" fill="white" font-size="9" font-family="serif">SERVICE</text>
+          <circle cx="50" cy="25" r="7" fill="#F4A900"/>
+          <line x1="50" y1="18" x2="50" y2="32" stroke="white" stroke-width="1.5"/>
+          <line x1="43" y1="25" x2="57" y2="25" stroke="white" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h1>Ghana Health Service</h1>
+      <p>Institutional Care Division · Greater Accra</p>
+    </div>
+    <div class="login-card">
+      <h2>Peer Review Assessment Portal</h2>
+      <div class="role-badges">
+        <span class="role-badge">🛡 Admin</span>
+        <span class="role-badge">👁 HQ Director</span>
+        <span class="role-badge">🔭 Supervisor</span>
+        <span class="role-badge">📋 Assessor</span>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="you@ghs.gov.gh">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Sign In to Assessment Portal</button>
+      <div id="loginError" class="login-error" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ APP SCREEN ═══════════════════════ -->
+<div id="appScreen" class="screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#006633"/>
+          <text x="50" y="42" text-anchor="middle" fill="white" font-size="11" font-family="serif" font-weight="bold">GHS</text>
+          <circle cx="50" cy="25" r="6" fill="#F4A900"/>
+          <line x1="50" y1="19" x2="50" y2="31" stroke="white" stroke-width="1.5"/>
+          <line x1="44" y1="25" x2="56" y2="25" stroke="white" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="topbar-title">GHS Peer Review Assessment</div>
+        <div class="topbar-subtitle">Greater Accra Region · 2026 Edition</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="dot"></div>
+        <span id="topbarUser">–</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="facility-banner" id="facilityBanner" style="display:none">
+    <span>📍</span>
+    <div>
+      <div class="facility-name" id="bannerFacilityName">–</div>
+      <div class="facility-meta" id="bannerFacilityMeta">–</div>
+    </div>
+    <div class="status-live"><div class="pulse"></div> Live Assessment Active</div>
+  </div>
+
+  <div class="main-content">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-section">Overview</div>
+      <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
+        <span class="nav-icon">🏠</span> Dashboard
+      </div>
+
+      <div class="sidebar-section" id="navModulesSection">Assessment Modules</div>
+      <div id="navModules"></div>
+
+      <div class="sidebar-section" id="navAdminSection">Administration</div>
+      <div id="navAdminItems"></div>
+    </div>
+
+    <div class="content-area">
+      <!-- DASHBOARD -->
+      <div id="view-dashboard" class="view-panel active">
+        <div id="dashboardContent"></div>
+      </div>
+
+      <!-- MODULE VIEWS (1-9) -->
+      <div id="view-module1" class="view-panel"><div id="moduleContent1"></div></div>
+      <div id="view-module2" class="view-panel"><div id="moduleContent2"></div></div>
+      <div id="view-module3" class="view-panel"><div id="moduleContent3"></div></div>
+      <div id="view-module4" class="view-panel"><div id="moduleContent4"></div></div>
+      <div id="view-module5" class="view-panel"><div id="moduleContent5"></div></div>
+      <div id="view-module6" class="view-panel"><div id="moduleContent6"></div></div>
+      <div id="view-module7" class="view-panel"><div id="moduleContent7"></div></div>
+      <div id="view-module8" class="view-panel"><div id="moduleContent8"></div></div>
+      <div id="view-module9" class="view-panel"><div id="moduleContent9"></div></div>
+
+      <!-- SCORECARD -->
+      <div id="view-scorecard" class="view-panel"><div id="scorecardContent"></div></div>
+
+      <!-- ADMIN -->
+      <div id="view-admin" class="view-panel"><div id="adminContent"></div></div>
+
+      <!-- FACILITIES -->
+      <div id="view-facilities" class="view-panel"><div id="facilitiesContent"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Create User -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal">
+    <h3>Create User Account</h3>
+    <p>Add an assessor, supervisor, or director to the system</p>
+    <div class="form-group"><label>Full Name</label><input type="text" id="newUserName" placeholder="Dr. Ama Agyemang"></div>
+    <div class="form-group"><label>Email Address</label><input type="email" id="newUserEmail" placeholder="ama@ghs.gov.gh"></div>
+    <div class="form-group"><label>Temporary Password</label><input type="password" id="newUserPass" placeholder="Min 8 chars"></div>
+    <div class="form-group">
+      <label>Role</label>
+      <select id="newUserRole">
+        <option value="admin">Admin</option>
+        <option value="hq_director">HQ Director</option>
+        <option value="supervisor">Senior Supervisor</option>
+        <option value="assessor_m1">Assessor – Module 1 (Environment)</option>
+        <option value="assessor_m2">Assessor – Module 2 (IPC)</option>
+        <option value="assessor_m3">Assessor – Module 3 (Emergency)</option>
+        <option value="assessor_m4">Assessor – Module 4 (Quality)</option>
+        <option value="assessor_m5">Assessor – Module 5 (Clinical)</option>
+        <option value="assessor_m6">Assessor – Module 6 (Client Care)</option>
+        <option value="assessor_m7">Assessor – Module 7 (OHS)</option>
+        <option value="assessor_m8">Assessor – Module 8 (Governance)</option>
+        <option value="assessor_m9">Assessor – Module 9 (Director's Mark)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Assigned Module (for Assessors)</label>
+      <input type="text" id="newUserModule" value="" placeholder="auto-filled from role">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
+      <button class="btn-primary" onclick="createUser()" style="width:auto">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Enroll Facility -->
+<div class="modal-overlay" id="enrollFacilityModal">
+  <div class="modal">
+    <h3>Enroll Healthcare Facility</h3>
+    <p>Register a facility for assessment in this round</p>
+    <div class="form-group"><label>Facility Name</label><input type="text" id="facilityName" placeholder="Ridge Hospital"></div>
+    <div class="form-group"><label>District / Sub-Metro</label><input type="text" id="facilityDistrict" placeholder="Ayawaso West"></div>
+    <div class="form-group">
+      <label>Facility Type</label>
+      <select id="facilityType">
+        <option>Regional Hospital</option>
+        <option>District Hospital</option>
+        <option>Polyclinic</option>
+        <option>Health Centre</option>
+        <option>CHPS Compound</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Assessment Date</label><input type="date" id="facilityDate"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('enrollFacilityModal')">Cancel</button>
+      <button class="btn-primary" onclick="enrollFacility()" style="width:auto">Enroll Facility</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA: All 9 modules with items and expected scores
+// ═══════════════════════════════════════════════════════════
+const MODULES = [
+  {
+    id: 1, name: "Environment & Infrastructure", maxScore: 158.5, icon: "🏗️",
+    assessorRole: "assessor_m1",
+    sections: [
+      { id: "A", name: "External Environment", items: [
+        {id:"A1.1", name:"Fully fenced and gated facility", max:1, criteria:"Completely fenced & gated = 1; Partially fenced = 0.5; Not fenced = 0"},
+        {id:"A1.2", name:"Landscaping – grass covering", max:3, criteria:"Score 3 max; deduct 0.5 each for not green, weeds, no kerbs, bushy, bare areas"},
+        {id:"A1.3", name:"Landscaping – Flowers/flowerpots", max:3, criteria:"Score 3 max; deduct 0.5 for no varieties, spread, arrangement, tendering"},
+        {id:"A1.4", name:"Trees (availability, arrangement, shade)", max:3, criteria:"Score 3 max; deduct 0.5 for spread, pattern, leaf droppings, no shade"},
+        {id:"A1.5", name:"Hedges (availability and trimming)", max:2, criteria:"Not available = 0; not trimmed = deduct 0.5; no pattern = deduct 0.5"},
+        {id:"A1.6", name:"Solid/Dry Waste Disposal (incinerator/contract)", max:9, criteria:"Functional multipurpose incinerator OR active outsourced contract = 9"},
+        {id:"A1.7", name:"Surroundings of incinerator / placenta pit", max:3, criteria:"Deduct 1.5 for not clean, 1.5 for weedy (per applicable option)"},
+        {id:"A1.8a", name:"Functional soak-away / centralized sewage system", max:3, criteria:"Not available = 0; deduct 0.5 each: not sealed, water around it, shared sink"},
+        {id:"A1.8b", name:"Drains condition", max:3, criteria:"Deduct 0.5 each: broken, rubbish/weeds, static water, silted, fungal growth"},
+        {id:"A1.9", name:"Septic tanks / centralized sewage condition", max:3, criteria:"Not available = 0; deduct 0.5 each: not sealed, water around, inaccessible, weedy"},
+      ]},
+      { id: "B", name: "Internal Environment", items: [
+        {id:"B1", name:"Window Nets", max:1.5, criteria:"Not available = 0; deduct 0.5 each: torn/holes, dirty"},
+        {id:"B2", name:"Louvre blades / Sliding windows", max:1.5, criteria:"Not available = 0; deduct 0.5 each: broken/missing, dirty"},
+        {id:"B3", name:"Staff Toilets (sex-segregated)", max:7, criteria:"Multiple deductions for cleanliness, WC function, toilet roll, odour, lighting, segregation"},
+        {id:"B4", name:"Hand hygiene facility at staff toilet", max:2, criteria:"All absent = 0; deduct 0.5 for each of 4 items not present"},
+        {id:"B5", name:"Cleaning schedules for staff toilets (4 units)", max:16, criteria:"4 marks per unit; no schedule = 0; deduct 0.5 each: day/date/time/person, unsigned, not filed, no remarks"},
+        {id:"B6", name:"Clients' toilets (sex-segregated)", max:7, criteria:"Multiple deductions for cleanliness, WC function, toilet roll, odour, lighting, segregation"},
+        {id:"B7", name:"Hand hygiene facility at client toilet", max:2, criteria:"All absent = 0; deduct 0.5 for each of 4 items not present"},
+        {id:"B8", name:"Menstrual hygiene facilities (3 wards)", max:15, criteria:"5 marks per ward; no area = 0; deduct 0.5 each for labelling, pedal bin, liner, wrappers, basin, water, clean, odour"},
+        {id:"B9", name:"In-patients' client bathrooms (4 wards)", max:4, criteria:"Deduct 0.5 each: not clean, no free water, doors incomplete, not lit"},
+        {id:"B10", name:"Cleaning schedules for client areas (4 units)", max:16, criteria:"4 marks per unit; no schedule = 0; deduct per standard criteria"},
+        {id:"B11", name:"State of Infrastructure", max:7, criteria:"Deduct 0.5 each for leaking roof, cracks, unpainted, peeling, damp/fungal, cobwebs, stains, ceiling fans dirty"},
+        {id:"B11a", name:"Working areas including mortuary", max:4, criteria:"Deduct 0.5 each: furniture, tabletop, steady, torn leather, air flow, lighting"},
+        {id:"B11b", name:"Mortuary working area and surroundings", max:4, criteria:"Deduct 0.5 each: slippery, dirty, odour, not bright, littered, weedy"},
+        {id:"B12", name:"Waste bins in offices (4 offices)", max:2, criteria:"Not available = 0; deduct 0.5 each: not pedal, pedal broken, no black liner"},
+        {id:"B13", name:"Waste bins in client service areas (4 areas)", max:4.5, criteria:"Deduct 0.5 each: not available, not pedal, broken pedal, dirty, no bigger bins"},
+        {id:"B14", name:"Segregation of waste (colour-coded, 4 units)", max:6, criteria:"Deduct 0.5 per unit: black not used, yellow not used, brown not used"},
+        {id:"B15", name:"WASH FIT Assessment (quarterly)", max:18, criteria:"Not done = 0; deduct for missed quarters, no copies with officers, no upload, no improvement plan"},
+        {id:"B16", name:"Disability-friendly facilities", max:8, criteria:"Not friendly = 0; no focal point = -2; no mobility aids = -2; no pathway per unit = -1 each"},
+      ]}
+    ]
+  },
+  {
+    id: 2, name: "Infection Prevention & Control", maxScore: 280.5, icon: "🦠",
+    assessorRole: "assessor_m2",
+    sections: [
+      { id: "2.1-2.3", name: "IPC Committee, Training & SOPs", items: [
+        {id:"2.1a", name:"Functional IPC team/committee – Appointment letters", max:1, criteria:"Deduct 0.25 per team member without appointment letter (4 randomly selected)"},
+        {id:"2.1b", name:"IPC focal person available", max:0.5, criteria:"Deduct 0.5 if no IPC focal person"},
+        {id:"2.1c", name:"Team members trained in IPC modules", max:0.5, criteria:"Deduct 0.5 if not all trained in Hand Hygiene, PPE, Env. Cleaning, Instrument Processing, Waste Mgmt"},
+        {id:"2.1d", name:"IPC meeting minutes (monthly, previous year)", max:9, criteria:"3 pts minutes; 6 pts recommendations addressed. Deduct per missed months"},
+        {id:"2.1e", name:"IPC budget captured", max:1, criteria:"Deduct 1 if IPC consumables not in budget"},
+        {id:"2.1f", name:"Unit/ward IPC action plans (4 areas)", max:10, criteria:"2 pts availability; 8 pts format (8 items × 0.25 per ward)"},
+        {id:"2.1g", name:"Staff knowledge of IPC gaps", max:2, criteria:"Deduct 0.5 per staff not aware (4 selected wards)"},
+        {id:"2.1h", name:"IPC dissemination report", max:1, criteria:"Deduct 1.0 if no dissemination report"},
+        {id:"2.1i", name:"IPC monitoring/surveillance (SSI)", max:1, criteria:"Deduct 1.0 if no SSI monitoring report"},
+        {id:"2.1j", name:"Quarterly IPC-WASH report (4 quarters)", max:2, criteria:"Deduct 0.5 per missing quarterly report"},
+        {id:"2.2a", name:"Orientation training for newly recruited staff", max:5, criteria:"Deduct 5 if orientation training not conducted within 1 month"},
+        {id:"2.2b", name:"In-service training for existing staff", max:5, criteria:"Deduct 5 if annual in-service training not conducted"},
+        {id:"2.3", name:"SOPs and Protocols availability (9 items)", max:4.5, criteria:"Deduct 0.5 for each SOP not available (Handwashing, AHR, WHO 5 moments, Triage, Chlorine, Waste, OHS, Disease outbreak, IPCAT)"},
+      ]},
+      { id: "2.4", name: "Hand Hygiene Practices", items: [
+        {id:"2.4a", name:"Soap/liquid soap in functional dispensers (3 units)", max:3, criteria:"Deduct 1.0 if unavailable; 0.5 if available but not in functional dispenser per unit"},
+        {id:"2.4b", name:"Running water at point of care (3 units)", max:1.5, criteria:"Deduct 0.5 per unit if no running water"},
+        {id:"2.4c", name:"Single-use hand towel in dispenser (3 units)", max:1.5, criteria:"Deduct 0.5 if not accessible or design allows contamination"},
+        {id:"2.4d", name:"Social hand washing demonstration (2 staff, 14 steps)", max:14, criteria:"Deduct 0.5 per incorrect step per staff (7 marks per staff)"},
+        {id:"2.4e", name:"Alcohol hand rub procedure (1 staff, 13 steps)", max:6.5, criteria:"Deduct 0.5 per incorrect step (6.5 marks, 0.5 × 13 steps)"},
+      ]},
+      { id: "2.5-2.6", name: "Environmental Cleaning & Sterile Processing", items: [
+        {id:"2.5a", name:"Cleaning schedules (3 months, OPD, Lab, Ward)", max:4.5, criteria:"Deduct 0.5 per month per ward/unit"},
+        {id:"2.5b", name:"Cleaning materials available", max:1, criteria:"Deduct 1 if not all listed items available"},
+        {id:"2.5c", name:"Storage area & decontamination of equipment", max:1, criteria:"Deduct 0.5 each for no decontamination and no storage area"},
+        {id:"2.6.1", name:"Chlorine decontamination – stock communicated & available", max:6, criteria:"4 pts staff knowledge; 2 pts stock level"},
+        {id:"2.6.1b", name:"Chlorine labelling (3 user units)", max:6, criteria:"Deduct 0.5 per unlabelled solution per unit"},
+        {id:"2.6.2", name:"Staff knowledge on chlorine preparation (3 staff)", max:3, criteria:"Deduct 1 per staff who cannot correctly describe preparation"},
+        {id:"2.6.3", name:"Written chlorine protocol (availability, display)", max:4.5, criteria:"1.5 available; 1.5 A3 laminated; 1.5 conspicuously displayed"},
+        {id:"2.6.4", name:"Chlorine efficacy testing (test strips + records, 3 units)", max:3, criteria:"1.5 for test strips; 1.5 for testing records"},
+        {id:"2.6.5", name:"Designated CSSD unit & autoclave", max:3.5, criteria:"1 functional unit; 1 trained staff; 1 autoclave; 0.5 clean surface"},
+        {id:"2.6.6", name:"Logistics for instrument sterilization (3 wards)", max:3, criteria:"Deduct 0.5 for each missing item in selected wards"},
+        {id:"2.6.7", name:"Processing & sterilization of reusable instruments (3 staff)", max:16.5, criteria:"3 staff × 5.5 marks; 0.5 per step not demonstrated"},
+        {id:"2.6.8", name:"Storage of sterile packaging (CSSD, delivery, surgical)", max:12, criteria:"1.5 per standard × 8 standards (airy, clean, double wrap, autoclave tape, dates, expiry, content, tracking)"},
+        {id:"2.6.9", name:"Delivery sets (5), episiotomy sets (5), dressing sets (3 units)", max:51.5, criteria:"10 delivery; 4 content; 10 episiotomy; 7 episiotomy content; 9 dressing; 11.5 dressing content"},
+        {id:"2.6.10", name:"CSSD sterile processing metrics (7 indicators)", max:3.5, criteria:"0.5 per indicator: physical, chemical, biological, cleaning process, traceability, turnaround, case cart error"},
+      ]},
+      { id: "2.7-2.11", name: "Spillage, Linen, Logistics & Surveillance", items: [
+        {id:"2.7", name:"Safe management of large blood/body fluid spillages", max:7, criteria:"Deduct 1 for each of 7 steps not correctly demonstrated"},
+        {id:"2.8.1", name:"Laundry with washing machine and drying lines", max:3, criteria:"No washer/dryer = deduct 3; no washer only = deduct 2; no drying = deduct 1"},
+        {id:"2.8.2", name:"Laundry procedures – items (12) and demonstration (5 steps)", max:8.5, criteria:"0.5 per missing item (6 pts); 0.5 per step not demonstrated (2.5 pts)"},
+        {id:"2.9", name:"IPC logistics at stores (19 items)", max:19, criteria:"Deduct 1 per item below minimum or unavailable or expired"},
+        {id:"2.10", name:"IPC logistics availability throughout year (5 items, 12 months)", max:12, criteria:"Deduct 0.5 per item per month of stockout"},
+        {id:"2.11", name:"Surveillance, monitoring, audit and feedback (5 indicators)", max:5, criteria:"Deduct 1 per indicator not available"},
+      ]}
+    ]
+  },
+  {
+    id: 3, name: "Emergency Services & Systems", maxScore: 191, icon: "🚨",
+    assessorRole: "assessor_m3",
+    sections: [
+      { id: "3.1-3.2", name: "Emergency System & Triage", items: [
+        {id:"3.1a", name:"Emergency duty roster (all units, all cadres)", max:3, criteria:"Deduct 1 per unit without duty rota covering all cadres"},
+        {id:"3.1b", name:"Triage team, flow diagram, directional signs", max:1.5, criteria:"Deduct 0.5 each: no triage line, no flow diagram, no directional signs"},
+        {id:"3.1c", name:"Designated emergency unit components (A&E Adult)", max:7.5, criteria:"No designated unit = -7.5; deduct 1.5 each: triage, resus, transient, procedure, waiting; -0.5 ambulance bay"},
+        {id:"3.1d", name:"A&E focal person, team composition, training", max:13.5, criteria:"Deduct 0.5 each: no focal person, not trained, no team, no team list, per training not done, no report"},
+        {id:"3.2", name:"Triage scenario (2 staff, 10 triage criteria each)", max:20, criteria:"Deduct 2 per staff if not completed in time; 0.5 per triage criterion incorrect"},
+      ]},
+      { id: "3.3-3.4", name: "Ward Emergency Medicines & Trays", items: [
+        {id:"3.3a", name:"Ward emergency medicine book documentation (3 wards)", max:10.5, criteria:"3.5 per ward; deduct 0.5 each: no format, requisition book, page per drug, shift balance, nurse signatures, containers, labels, monthly signature"},
+        {id:"3.3b", name:"Minimum ward emergency medicine content (2 adult wards)", max:14, criteria:"7 per ward; deduct 0.5 per missing medicine"},
+        {id:"3.4", name:"Emergency tray availability (5 units)", max:5, criteria:"Absent all units = 0; deduct 1 per unit without tray"},
+        {id:"3.4b", name:"A&E emergency tray minimum content (46 items)", max:26, criteria:"Deduct 0.5 per missing item"},
+      ]},
+      { id: "3.5-3.6", name: "Obstetric & Paediatric Emergency Packs", items: [
+        {id:"3.5a", name:"APH pack content (13 items)", max:6.5, criteria:"No APH pack = -12.5 overall; deduct 0.5 per missing item"},
+        {id:"3.5b", name:"Pre-eclampsia/eclampsia pack content (12 items)", max:6, criteria:"Deduct 0.5 per missing item"},
+        {id:"3.5c", name:"PPH pack content (13 items)", max:6.5, criteria:"No PPH pack = -6.5 overall; deduct 0.5 per missing item"},
+        {id:"3.6", name:"Paediatric emergency tray (26 items)", max:13, criteria:"Tray absent = 0; deduct 0.5 per missing item"},
+      ]},
+      { id: "3.7-3.10", name: "Neonatal, Blood, Anaesthesia & Bed Flow", items: [
+        {id:"3.7a", name:"Neonatal resuscitation skills practice area (manikin, equipment, logbook, drills)", max:12, criteria:"No area = 0; deduct 1 no manikin; 0.5 per missing equipment; 1 no logbook; deduct 1-3 per % staff not practicing"},
+        {id:"3.7b", name:"Mass casualty protocol & simulation exercise (annual)", max:8, criteria:"No evidence = 0; no report/pictures/video = -4; deduct 1 per key group absent"},
+        {id:"3.8", name:"Blood availability (stock level, O-negative, fridge, temperature)", max:12, criteria:"No blood = 0; below standard stock = -7; no O-neg = -2; no fridge = 0; no thermometer = -0.5; no temp chart = -0.5"},
+        {id:"3.9", name:"Anaesthesia department preparedness (20 items)", max:10, criteria:"Deduct 0.5 per missing item (timetable, anaesthesia machine, laryngoscope, airways, etc.)"},
+        {id:"3.10", name:"Service/bed availability at ER (length of stay max 48h)", max:10, criteria:"Stay 48-96h = deduct 5; stay >96h = deduct 10"},
+      ]}
+    ]
+  },
+  {
+    id: 4, name: "Quality & Safety Management", maxScore: 314.5, icon: "🏆",
+    assessorRole: "assessor_m4",
+    sections: [
+      { id: "4.1-4.4", name: "Governance, Action Plans & QI Team", items: [
+        {id:"4.1", name:"Quality governance structure (Committee, Unit, Manager, QIT, WITs)", max:8, criteria:"Deduct 1 each: no committee, no unit/computer, no QM appointment, no QIT, no WIT per unit (4 units)"},
+        {id:"4.2", name:"Quality & Safety Action Plan – availability and format", max:5, criteria:"No plan = 0; deduct 0.5-1 per missing standard element"},
+        {id:"4.3", name:"Proportion of previous year's action plan executed (4 quarters)", max:8, criteria:"Deduct 0.5 per quarter <50% implemented; 2 per missing evidence"},
+        {id:"4.4", name:"Functional Facility Quality Improvement Team (9 criteria)", max:32, criteria:"Deduct per criterion: training, new staff, QI projects (current & previous year), dissemination, meetings, WIT meetings, quarterly reports"},
+      ]},
+      { id: "4.5-4.6", name: "Work Improvement Teams & Research", items: [
+        {id:"4.5a", name:"WIT functionality – Maternity (8 criteria)", max:28, criteria:"Training, new staff orientation, QI projects, dissemination, weekly meetings (12 weeks), minutes, recommendations"},
+        {id:"4.5b", name:"WIT functionality – OPD & Emergency (8 criteria)", max:28, criteria:"Same as maternity unit criteria"},
+        {id:"4.6", name:"Operational research (conduct, dissemination, gaps addressed)", max:6, criteria:"Deduct 2 each: no research, not disseminated, gaps not addressed"},
+      ]},
+      { id: "4.7-4.9", name: "Client/Staff Surveys & Complaints", items: [
+        {id:"4.7a", name:"OPD client experience survey (questionnaires, report, action)", max:11.5, criteria:"Deduct per: <20% coverage, missing report elements, no mgmt copies, no action plan, no dissemination, staff unaware"},
+        {id:"4.7b", name:"IPD client experience survey (questionnaires, report, action)", max:11.5, criteria:"Deduct per: <40% coverage, missing report elements, no mgmt copies, no action plan, no dissemination, staff unaware"},
+        {id:"4.8", name:"Staff satisfaction survey (report, action plan, dissemination, awareness)", max:4, criteria:"No questionnaire = 0; deduct 0.5-2.5 per missing element"},
+        {id:"4.9a", name:"Information/complaints desk functionality (8 criteria)", max:5.5, criteria:"No desk = 0; deduct per: no trained staff, no guidelines, no register, no weekly summary, no phone number, no mgmt reports, no feedback, not filed"},
+        {id:"4.9b", name:"Inpatient awareness of hotline (2 wards, 5 patients)", max:3.5, criteria:"Deduct 0.5 per ward not displayed; 0.5 per unaware patient"},
+        {id:"4.9c", name:"Suggestion box (transparent, accessible, keyed)", max:3, criteria:"Not available = 0; deduct 1 each: not accessible, not transparent, no key"},
+        {id:"4.9d", name:"Directional signs and unit labelling (4 units)", max:4, criteria:"Deduct 0.5 each: no central signs, not legible; 0.25 per unit for labels, legibility, noticeboards"},
+        {id:"4.9e", name:"Adverse events monitoring and learning (4 units)", max:10, criteria:"Deduct 1 per unit no register; 1 no designated person; 1 per unit no action; 1 no learning shared"},
+      ]},
+      { id: "4.10-4.14", name: "Clinical Audits, Referrals, Cold Chain & Data", items: [
+        {id:"4.10", name:"Clinical audits (2 quarters, minutes, attendance, action)", max:10, criteria:"No report = 0; deduct 2 per quarter missing; 2 per no attendance; 1 per no action"},
+        {id:"4.11", name:"Mortality conferences (list, 4 meetings, recommendations)", max:4.5, criteria:"Score 0.5 per element: death list, meeting minutes × 4, recommendations × 4"},
+        {id:"4.12a", name:"Referral guidelines in 4 units", max:4, criteria:"Deduct 1 per unit without referral protocol"},
+        {id:"4.12b", name:"Referral registers (IN & OUT, composite register)", max:5, criteria:"Deduct 0.5 per unit without register; 0.5 per composite register missing"},
+        {id:"4.12c", name:"Referral forms (availability and completeness, 4 units, 8 forms)", max:8, criteria:"Deduct 1 per unit <10 forms; 0.5 per improperly filled form"},
+        {id:"4.12d", name:"Feedback to referring facility within 1 month (10 cases)", max:13.5, criteria:"3 pts forms in wards; 5 pts proper filling; 5 pts dispatch; 0.5 composite feedback register"},
+        {id:"4.13", name:"Cold chain maintenance (Lab, Pharmacy, PHU, Maternity)", max:9, criteria:"2 pts fridge thermometer; 2 pts staff temperature demo; 2 pts daily charting; 3 pts ASV/ARV/ATS"},
+        {id:"4.14a", name:"HI/Data management hardware (7 items)", max:3.5, criteria:"No unit = 0; deduct 0.5 per missing item"},
+        {id:"4.14b", name:"Data validation team and monthly meetings (6 months)", max:16, criteria:"Deduct 2 no team; 1 no schedule; 1 no SOP; scoring for % meetings held; 3 pts attendance; 3 pts monthly reports"},
+        {id:"4.14c", name:"Patient record documentation (6 folders, 12 items each)", max:36, criteria:"Deduct 0.5 per missing item per folder"},
+        {id:"4.14d", name:"3-year data trend graphs (4 indicators)", max:3, criteria:"No graph = 0; not 3-year = deduct 1; deduct 0.5 per missing indicator"},
+        {id:"4.14e", name:"DHIMS data entry completeness & timeliness (18 datasets)", max:24, criteria:"Deduct 0.5 per dataset per month not complete or timely; special scoring for death certification"},
+      ]}
+    ]
+  },
+  {
+    id: 5, name: "Clinical Practice", maxScore: 295, icon: "🩺",
+    assessorRole: "assessor_m5",
+    sections: [
+      { id: "5.1-5.4", name: "Case Management Protocols", items: [
+        {id:"5.1", name:"Case management protocols – general (malaria, diarrhoea, convulsion, etc.)", max:2, criteria:"Not available = -0.5; not A3 laminated = -0.5; not displayed = -0.5; not signed = -0.5"},
+        {id:"5.2", name:"Maternal case protocols (pre-eclampsia, eclampsia, PPH, septic abortion)", max:2, criteria:"Not available = -0.5; not A3 laminated = -0.5; not displayed = -0.5; not signed = -0.5"},
+        {id:"5.3", name:"Newborn case management protocols (asphyxia, sepsis, hypoglycaemia, jaundice)", max:2, criteria:"Not available = -0.5; not laminated = -0.5; not displayed = -0.5; not signed = -0.5"},
+        {id:"5.4", name:"Partograph use in labour ward (10 recent delivery folders)", max:5, criteria:"Deduct 0.5 per folder where partograph not used or inappropriately used"},
+      ]},
+      { id: "5.5-5.9", name: "Clinical Meetings & Maternal/Neonatal Outcomes", items: [
+        {id:"5.5", name:"Family clinical meetings (2 per year with sub-district facilities)", max:6.5, criteria:"No reports = 0; deduct 0.5: no schedule, no communication, no RHD invitation, no reports; deduct 2 no actions"},
+        {id:"5.6", name:"Clinical meetings (monthly, signed attendance)", max:6, criteria:"Score 6 for 12+; 3 for 10-11; 1 for 7-9; 0 for <6; deduct 1 per unauthentic report"},
+        {id:"5.7", name:"C/S wound infection rate (20 folders)", max:20, criteria:"Deduct 1 per infected wound; missing folders counted as infected"},
+        {id:"5.8", name:"Fresh stillbirth rate (%)", max:6, criteria:"≤2.4% = 6; 2.5-3.99% = 3; 4.0-4.75% = 1.5; ≥4.76% = 0"},
+        {id:"5.9", name:"Perinatal death audit (% audited, % recommendations implemented)", max:20, criteria:"Score for audit proportion; 8 pts recommendations (80-100%=8, 60-79%=6, 40-59%=4, 20-39%=2)"},
+      ]},
+      { id: "5.10-5.18", name: "Indicators, Medicine Use & TB/HIV", items: [
+        {id:"5.10", name:"U5 Malaria Case Fatality Rate", max:3, criteria:"CFR ≤0.81% = 3; 0.82-0.99% = 1.5; ≥1% = 0"},
+        {id:"5.11", name:"Institutional Maternal Mortality Ratio", max:3, criteria:"≤125/100,000LB = 3; 120.5-127 = 1.5; ≥128 = 0"},
+        {id:"5.12", name:"Maternal mortality review (list, notification, review, DHIMS, submission, actions)", max:12, criteria:"1 pt list; deduct 1 each: no notification, after 24h, <80% reviews, no DHIMS, <80% forms, no RHD, no actions"},
+        {id:"5.13", name:"Drugs & Therapeutic Committee (DTC) functionality", max:18.5, criteria:"Deduct 5 no composition; 3 no action plan; deduct per format items; 0.5 per missing quarterly meeting; deduct per RUM report, dissemination, ADR"},
+        {id:"5.14", name:"Tracer medicine availability (15 medicines, 12 months)", max:90, criteria:"Deduct 0.5 per medicine per month of stockout (max 6 per medicine, total 90)"},
+        {id:"5.15", name:"Proportion of OPD attendants screened for TB", max:3, criteria:"≥10% = 3; 5-10% = 1.5; <5% = 0"},
+        {id:"5.16", name:"Institutional TB cure rate", max:3, criteria:"≥90% = 3; 75-89% = 1.5; <75% = 0"},
+        {id:"5.17", name:"HIV 95/95/95 – ARV uptake", max:3, criteria:"≥95% = 3; 80-94% = 1.5; <80% = 0"},
+        {id:"5.18", name:"Rational use of medicine indicators (7 RUM indicators)", max:21, criteria:"3 pts each: prescription diagnosis, drugs/Rx, generic prescribing, EML, antibiotic %, injection %, review date"},
+      ]},
+      { id: "5.19-5.20", name: "Laboratory & Nursing Audits", items: [
+        {id:"5.19a", name:"Basic lab investigation registers (6 registers)", max:3, criteria:"Deduct 0.5 per missing register"},
+        {id:"5.19b", name:"Laboratory quality control (L&J charts, transfusion QA)", max:2, criteria:"No QA activities = deduct 2"},
+        {id:"5.19c", name:"Laboratory SOPs (transfusion and general)", max:2, criteria:"No transfusion SOPs = -1; no general lab SOPs = -1"},
+        {id:"5.20a", name:"Ward annual plans (3 wards, availability and format)", max:7.5, criteria:"Deduct 0.5 per ward missing plan or format item"},
+        {id:"5.20b", name:"Nursing process documentation (12 folders, NURSMID)", max:24, criteria:"Not used = 0; deduct 0.5 per missing item per folder"},
+        {id:"5.20c", name:"Handover/takeover documentation", max:0.5, criteria:"No handover documentation = 0; deduct 0.5 if name/signature missing"},
+        {id:"5.20d", name:"Vital signs monitoring (12 folders, 4-hourly charting)", max:24, criteria:"Not done = 0; deduct 0.5 per vital sign not charted per folder"},
+        {id:"5.20e", name:"Treatment monitoring charts (3 wards, nurse initials, schedule)", max:6, criteria:"Not available = 0; deduct 0.5 per missing item per ward"},
+      ]}
+    ]
+  },
+  {
+    id: 6, name: "Client Care", maxScore: 64, icon: "❤️",
+    assessorRole: "assessor_m6",
+    sections: [
+      { id: "6.1-6.6", name: "Public Health, Wellness & Client Services", items: [
+        {id:"6.1", name:"Institutional Public Health Unit (IPHU) – availability and functionality", max:11, criteria:"No unit = 0; deduct 1 per: unqualified head, missing key staff (5); scoring for monthly meetings; reports to Med Supt"},
+        {id:"6.2", name:"Linkage between public health and clinical care (CHPS referral)", max:13, criteria:"Deduct 0.5 per unit without CHPS contact; 3 no referral register; 1 per missing register item (5); 1 no referral note; 1 no feedback"},
+        {id:"6.3", name:"Wellness Clinic (functional, staffed, equipped)", max:11, criteria:"Not available = 0; deduct 1 each: not labelled, no dedicated staff, no register, missing equipment (5 items), no training, no schedule"},
+        {id:"6.4", name:"Geriatric services (area, equipment, HR, porter)", max:4, criteria:"Deduct 1 each: no dedicated services, no area, no equipment, no porter"},
+        {id:"6.5", name:"Name tags for 5 randomly selected staff (4 elements each)", max:12, criteria:"Deduct 2 if not wearing tag; 0.5 per missing element (logo, institution, name, designation)"},
+        {id:"6.6", name:"Client Care Executives (CCE) unit functionality (9 criteria)", max:13, criteria:"No unit = 0; deduct 1 each: no identifier, no schedule, no protocol, no logbook, no weekly summary, no phone display, no feedback, no filed complaints, hotline not displayed, patients unaware"},
+      ]}
+    ]
+  },
+  {
+    id: 7, name: "Occupational Health & Safety", maxScore: 97, icon: "🦺",
+    assessorRole: "assessor_m7",
+    sections: [
+      { id: "7.1-7.5", name: "OHS Unit, PPE, Fire & Sharps", items: [
+        {id:"7.1", name:"OHS unit, focal person, committee (availability and training)", max:6, criteria:"Deduct 2 no unit; 2 no focal person; 1 not trained; 2 no committee; 1 available not trained; 1 not functional"},
+        {id:"7.2", name:"PPE availability and donning/doffing demonstration (3 units, 3 staff)", max:39, criteria:"13 per unit: 4 availability + 4.5 donning + 4.5 doffing; 0.5 per incorrect step"},
+        {id:"7.3", name:"Designated unit for infectious diseases & barrier nursing knowledge", max:5, criteria:"No designated area = -2.5; deduct 0.5 per barrier nursing step not known (5 steps)"},
+        {id:"7.4", name:"Sharps disposal box (leak/puncture proof, not overflowing, 2 units)", max:3.5, criteria:"Not available = 0; deduct 0.5 per unit: overflowing, folded wrongly, mixed waste"},
+        {id:"7.5", name:"Fire extinguisher, evacuation plan, 'No smoking' signs (3 units)", max:9, criteria:"Deduct 0.5 per unit: no extinguisher, no smoke detector, expired, deduct per staff not able to demonstrate, no evacuation plan, no smoking sign"},
+      ]},
+      { id: "7.6-7.10", name: "Staff Screening, Lab Safety, Incidents & Risk", items: [
+        {id:"7.6", name:"Annual staff screening (5 conditions, ≥70% staff, referral, report)", max:13, criteria:"No screening = 0; <70% = -5; deduct 1 per missing condition; 1 no referral; 1 no proposal; 1 no overall report"},
+        {id:"7.7", name:"Laboratory floor plan and working environment", max:3.5, criteria:"Deduct 0.5 each: no client area, no testing area, no clerical area, cables crossing, no stabilisers, shared sockets, dirty bench/sinks"},
+        {id:"7.8", name:"Adverse incidents register (5 units, collation, action)", max:3.5, criteria:"Not available = 0; deduct 0.5 per unit without register; 2 not collated by OHS; 1 no actions; 1 unit head not signing monthly"},
+        {id:"7.9", name:"Post-exposure prophylaxis register (7 items + monthly summary)", max:4.5, criteria:"Deduct 0.5 per missing detail; 1 no monthly summary"},
+        {id:"7.10", name:"Risk assessment report (10-section format)", max:10, criteria:"Not conducted = 0; deduct 1 per missing section"},
+      ]}
+    ]
+  },
+  {
+    id: 8, name: "Governance", maxScore: 297, icon: "🏛️",
+    assessorRole: "assessor_m8",
+    sections: [
+      { id: "8.1-8.4", name: "HRIMS, Accreditation & Finance", items: [
+        {id:"8.1a", name:"HRIMS – newly posted staff data entry (100%)", max:5, criteria:"95-100%=5; 85-94%=3; 50-84%=1; <50%=0"},
+        {id:"8.1b", name:"HRIMS – disengagement of wastages (100%)", max:5, criteria:"95-100%=5; 85-94%=3; 50-84%=1; <50%=0"},
+        {id:"8.1c", name:"HRIMS – completeness of 10 staff records (7 fields each)", max:35, criteria:"Deduct 0.5 per missing field per staff (picture, DOB, NIC, 1st appointment, current appointment, professional code, phone)"},
+        {id:"8.2a", name:"HeFRA accreditation / evidence of completion", max:20, criteria:"Full accreditation certificate or payment evidence = 20; none = 0"},
+        {id:"8.2b", name:"NHIA credentialing / evidence of payment", max:20, criteria:"Credentialing certificate or payment evidence = 20; none = 0"},
+        {id:"8.3", name:"IGF quarterly expenditure budget forecast (4 quarters, approved)", max:20, criteria:"100% = 20; 50-75% = 5; <50% = 0"},
+        {id:"8.4", name:"Management meeting minutes & implementation register (12 months)", max:20, criteria:"12 meetings = 10; 10-11 = 5; 7-9 = 3; ≤6 = 0; deduct for missing register elements"},
+      ]},
+      { id: "8.5-8.10", name: "Telemedicine, Plans, Meetings & Training", items: [
+        {id:"8.5", name:"Telemedicine – training, functional system, call logbook", max:4, criteria:"No training report = -2; no functional system = -2"},
+        {id:"8.6", name:"Strategic plan (availability, format, monitoring, staff awareness)", max:12, criteria:"No plan = 0; deduct 0.5 per missing format element; 2 no monitoring; 0.5 per staff unaware"},
+        {id:"8.7", name:"Action plan (4 units, standard format)", max:5, criteria:"Not in all 4 units = 0; deduct 0.5 per unit without plan; 0.5 per missing format item"},
+        {id:"8.8", name:"Ward/unit meetings (4 units, monthly, minutes, decisions)", max:40, criteria:"10 per unit: meetings score, decision book, decisions implemented"},
+        {id:"8.9", name:"Staff durbars (4 per year, in-person, ≥50% attendance)", max:10, criteria:"Score for number of durbars and attendance percentage"},
+        {id:"8.10", name:"In-service training (TNA, plan, 2 facility-based trainings)", max:13, criteria:"No TNA = -2; no plan = -2; deduct per format items; deduct 1 per missing training"},
+      ]},
+      { id: "8.11-8.20", name: "Finance, Stores, Claims & Records", items: [
+        {id:"8.11", name:"Weekly cash flow statements (file, management copies)", max:7, criteria:"No statement = 0; deduct 1 no file; 1 no records; 1 each for management member without copy"},
+        {id:"8.12", name:"Quarterly financial report (4 quarters, positive net worth, management copies)", max:12, criteria:"No records = 0; deduct per missing quarter; deduct 2 negative net worth; 1 per management member without copy"},
+        {id:"8.13", name:"Equipment replacement plan (needs assessment, prioritization, cost)", max:3, criteria:"Deduct 1 each: no needs assessment, no priority list, no estimated cost"},
+        {id:"8.14", name:"Lab & theatre equipment maintenance (stickers, logbook)", max:5, criteria:"Deduct 0.5 per equipment without sticker; 2 no logbook; 1 not updated"},
+        {id:"8.15", name:"NHIS claims management (unit, staff, register, vetting, <3% deduction)", max:13, criteria:"No unit = 0; deduct 0.5 per missing staff; 2 no register; per missing register item; deduct for >3% deduction"},
+        {id:"8.16", name:"General administration books (received, dispatched, visitors)", max:3, criteria:"Deduct 1 per absent book; 0.5 per book not in use"},
+        {id:"8.17", name:"Standards and guidelines availability (25 documents)", max:12.5, criteria:"Deduct 0.5 per missing document"},
+        {id:"8.18", name:"Stores and supply chain management (procurement, GhiLMIS)", max:13, criteria:"Deduct per: no procurement plan, no ETC minutes, no register, no tally card agreement, no pallets, no expired goods action, no AC, <50% GhiLMIS"},
+        {id:"8.19", name:"Audit committee (availability, function, query response)", max:4, criteria:"No committee = 0; not functional = -1; no query response = -2; not timely = -1; no minutes = -1"},
+        {id:"8.20", name:"Medical records department (signage, security, lighting, cleanliness)", max:3.5, criteria:"Deduct 0.5 per: not signposted, not secured, poor lighting, leakage/rodents, dirty, no AC/fan, no PA system"},
+        {id:"8.20a", name:"Key medical records and registers (7 registers)", max:3.5, criteria:"Deduct 0.5 per missing register"},
+        {id:"8.20b", name:"Health information management (data validation, analysis disseminated)", max:8.5, criteria:"No team = -2; deduct per missed validation meetings; deduct per missing equipment; 0.5 per staff unaware"},
+      ]}
+    ]
+  },
+  {
+    id: 9, name: "Regional Director's Mark", maxScore: 55, icon: "⭐",
+    assessorRole: "assessor_m9",
+    sections: [
+      { id: "9.1-9.4", name: "Innovation, Organisation, Attendance & Director's Mark", items: [
+        {id:"9.1", name:"Innovation (1 submission, scored on relevance, feasibility, scalability, strategic alignment)", max:10, criteria:"+2 if innovation submitted; +2 each for relevance, feasibility, scalability, strategic alignment"},
+        {id:"9.2", name:"Organisation of peer review (timeliness, ushering, AV, participation, stakeholders)", max:10, criteria:"Deduct 2 staff not on time; 2 no ushers; 1 each no AV/PA/seating; 1 low participation; 2 no stakeholders"},
+        {id:"9.3", name:"Attendance of Medical Superintendent and management team", max:15, criteria:"Med Supt absent = -5; <4 core managers or no IPC/QA focal = -2 each"},
+        {id:"9.4", name:"Regional Director's Mark (priority area, modalities set by RDHS)", max:20, criteria:"Assessment criteria and scoring determined by Regional Director of Health Service"},
+      ]}
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════════
+let db, auth, currentUser, currentUserData;
+let currentFacilityId = null;
+let currentFacilityData = null;
+let allScores = {}; // {facilityId: {moduleId: {itemId: score}}}
+let allFacilities = {};
+let allUsers = {};
+let liveFeedItems = [];
+let autoSaveTimers = {};
+let unsubscribers = [];
+
+// ═══════════════════════════════════════════════════════════
+// FIREBASE INIT
+// ═══════════════════════════════════════════════════════════
+function initFirebase() {
+  const apiKey = document.getElementById('cfg_apiKey').value.trim();
+  const authDomain = document.getElementById('cfg_authDomain').value.trim();
+  const projectId = document.getElementById('cfg_projectId').value.trim();
+  const appId = document.getElementById('cfg_appId').value.trim();
+
+  if (!apiKey || !authDomain || !projectId || !appId) {
+    showToast('Please fill all Firebase configuration fields', 'error');
+    return;
+  }
+
+  const config = { apiKey, authDomain, projectId, appId };
+  localStorage.setItem('ghsPeerConfig', JSON.stringify(config));
+  bootFirebase(config);
+}
+
+function bootFirebase(config) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(onAuthChange);
+    showScreen('loginScreen');
+  } catch(e) {
+    showToast('Firebase initialization failed: ' + e.message, 'error');
+    showScreen('configScreen');
+  }
+}
+
+// ─── Auto-load config on startup ───
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('ghsPeerConfig');
+  if (saved) {
+    try {
+      const config = JSON.parse(saved);
+      bootFirebase(config);
+    } catch(e) {
+      showScreen('configScreen');
+    }
+  } else {
+    showScreen('configScreen');
+  }
+});
+
+function onAuthChange(user) {
+  if (user) {
+    currentUser = user;
+    loadUserData(user.uid);
+  } else {
+    currentUser = null;
+    showScreen('loginScreen');
+  }
+}
+
+async function loadUserData(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      currentUserData = { uid, ...doc.data() };
+    } else {
+      currentUserData = { uid, email: currentUser.email, role: 'hq_director', name: currentUser.email };
+    }
+    afterLogin();
+  } catch(e) {
+    showToast('Error loading user data', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+
+  if (!email || !pass) {
+    err.textContent = 'Please enter your email and password.';
+    err.style.display = 'block';
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    err.textContent = e.message.replace('Firebase: ', '');
+    err.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  unsubscribers.forEach(u => u && u());
+  unsubscribers = [];
+  auth.signOut();
+}
+
+function afterLogin() {
+  showScreen('appScreen');
+  document.getElementById('topbarUser').textContent = (currentUserData.name || currentUserData.email) + ' · ' + roleLabel(currentUserData.role);
+  buildSidebar();
+  showView('dashboard');
+  subscribeToData();
+}
+
+function roleLabel(role) {
+  const labels = {
+    admin: 'Admin',
+    hq_director: 'HQ Director',
+    supervisor: 'Supervisor',
+    assessor_m1: 'Assessor M1', assessor_m2: 'Assessor M2',
+    assessor_m3: 'Assessor M3', assessor_m4: 'Assessor M4',
+    assessor_m5: 'Assessor M5', assessor_m6: 'Assessor M6',
+    assessor_m7: 'Assessor M7', assessor_m8: 'Assessor M8',
+    assessor_m9: 'Assessor M9'
+  };
+  return labels[role] || role;
+}
+
+// ═══════════════════════════════════════════════════════════
+// LIVE DATA SUBSCRIPTION
+// ═══════════════════════════════════════════════════════════
+function subscribeToData() {
+  // Facilities
+  const u1 = db.collection('facilities').onSnapshot(snap => {
+    allFacilities = {};
+    snap.forEach(doc => allFacilities[doc.id] = { id: doc.id, ...doc.data() });
+    refreshCurrentView();
+    if (currentFacilityId && allFacilities[currentFacilityId]) {
+      updateFacilityBanner(allFacilities[currentFacilityId]);
+    }
+  });
+  unsubscribers.push(u1);
+
+  // Scores (live!)
+  const u2 = db.collection('scores').onSnapshot(snap => {
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (!allScores[d.facilityId]) allScores[d.facilityId] = {};
+      if (!allScores[d.facilityId][d.moduleId]) allScores[d.facilityId][d.moduleId] = {};
+      allScores[d.facilityId][d.moduleId][d.itemId] = d.score;
+    });
+    refreshCurrentView();
+    updateNavScores();
+  });
+  unsubscribers.push(u2);
+
+  // Live feed
+  const u3 = db.collection('feed').orderBy('ts', 'desc').limit(20).onSnapshot(snap => {
+    liveFeedItems = [];
+    snap.forEach(doc => liveFeedItems.push({ id: doc.id, ...doc.data() }));
+    renderFeedIfVisible();
+  });
+  unsubscribers.push(u3);
+
+  // Users
+  if (isAdmin() || isHQ() || isSupervisor()) {
+    const u4 = db.collection('users').onSnapshot(snap => {
+      allUsers = {};
+      snap.forEach(doc => allUsers[doc.id] = { id: doc.id, ...doc.data() });
+      refreshCurrentView();
+    });
+    unsubscribers.push(u4);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROLE HELPERS
+// ═══════════════════════════════════════════════════════════
+function isAdmin() { return currentUserData?.role === 'admin'; }
+function isHQ() { return currentUserData?.role === 'hq_director'; }
+function isSupervisor() { return currentUserData?.role === 'supervisor'; }
+function isAssessor() { return currentUserData?.role?.startsWith('assessor_'); }
+function getAssessorModule() {
+  if (!isAssessor()) return null;
+  const m = currentUserData.role.match(/assessor_m(\d+)/);
+  return m ? parseInt(m[1]) : null;
+}
+function canSeeAllFacilities() { return isAdmin() || isHQ(); }
+function canSeeCurrentFacility() { return isSupervisor() || isAssessor(); }
+
+// ═══════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════
+function buildSidebar() {
+  const navModules = document.getElementById('navModules');
+  const navAdmin = document.getElementById('navAdminItems');
+  const navAdminSection = document.getElementById('navAdminSection');
+  const navModulesSection = document.getElementById('navModulesSection');
+  navModules.innerHTML = '';
+  navAdmin.innerHTML = '';
+
+  if (isAdmin() || isHQ() || isSupervisor()) {
+    // All modules visible
+    MODULES.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'nav-item';
+      div.dataset.view = 'module' + m.id;
+      div.onclick = () => showView('module' + m.id);
+      div.innerHTML = `<span class="nav-icon">${m.icon}</span><span>Module ${m.id}</span><span class="nav-score-pill empty" id="navPill${m.id}">–</span>`;
+      navModules.appendChild(div);
+    });
+  } else if (isAssessor()) {
+    const mNum = getAssessorModule();
+    navModulesSection.textContent = 'My Module';
+    if (mNum) {
+      const m = MODULES[mNum - 1];
+      const div = document.createElement('div');
+      div.className = 'nav-item';
+      div.dataset.view = 'module' + mNum;
+      div.onclick = () => showView('module' + mNum);
+      div.innerHTML = `<span class="nav-icon">${m.icon}</span><span>Module ${mNum}: ${m.name.split(' ')[0]}</span><span class="nav-score-pill empty" id="navPill${mNum}">–</span>`;
+      navModules.appendChild(div);
+    }
+  }
+
+  // Scorecard for supervisors and above
+  if (!isAssessor()) {
+    const sc = document.createElement('div');
+    sc.className = 'nav-item';
+    sc.dataset.view = 'scorecard';
+    sc.onclick = () => showView('scorecard');
+    sc.innerHTML = `<span class="nav-icon">📊</span><span>Scorecard</span>`;
+    navModules.appendChild(sc);
+  }
+
+  // Admin items
+  if (isAdmin() || isSupervisor()) {
+    navAdminSection.style.display = 'block';
+    if (isSupervisor() || isAdmin()) {
+      const f = document.createElement('div');
+      f.className = 'nav-item';
+      f.dataset.view = 'facilities';
+      f.onclick = () => showView('facilities');
+      f.innerHTML = `<span class="nav-icon">🏥</span><span>Facilities</span>`;
+      navAdmin.appendChild(f);
+    }
+    if (isAdmin()) {
+      const a = document.createElement('div');
+      a.className = 'nav-item';
+      a.dataset.view = 'admin';
+      a.onclick = () => showView('admin');
+      a.innerHTML = `<span class="nav-icon">⚙️</span><span>Admin</span>`;
+      navAdmin.appendChild(a);
+    }
+  }
+}
+
+function updateNavScores() {
+  if (!currentFacilityId) return;
+  MODULES.forEach(m => {
+    const pill = document.getElementById('navPill' + m.id);
+    if (!pill) return;
+    const score = getModuleScore(m.id);
+    const pct = Math.round((score / m.maxScore) * 100);
+    pill.textContent = pct + '%';
+    pill.className = 'nav-score-pill ' + (score === 0 ? 'empty' : pct >= 70 ? '' : 'partial');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCORE HELPERS
+// ═══════════════════════════════════════════════════════════
+function getItemScore(moduleId, itemId) {
+  return allScores[currentFacilityId]?.[moduleId]?.[itemId] ?? null;
+}
+
+function getModuleScore(moduleId) {
+  const mScores = allScores[currentFacilityId]?.[moduleId] || {};
+  return Object.values(mScores).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+}
+
+function getModuleScoreForFacility(facilityId, moduleId) {
+  const mScores = allScores[facilityId]?.[moduleId] || {};
+  return Object.values(mScores).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+}
+
+function getTotalScore(facilityId) {
+  let total = 0;
+  MODULES.forEach(m => total += getModuleScoreForFacility(facilityId, m.id));
+  return total;
+}
+
+function getTotalMaxScore() {
+  return MODULES.reduce((s, m) => s + m.maxScore, 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW ROUTER
+// ═══════════════════════════════════════════════════════════
+let currentView = 'dashboard';
+
+function showView(view) {
+  document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const panel = document.getElementById('view-' + view);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.nav-item[data-view="' + view + '"]').forEach(n => n.classList.add('active'));
+  currentView = view;
+
+  if (view === 'dashboard') renderDashboard();
+  else if (view.startsWith('module')) {
+    const mNum = parseInt(view.replace('module', ''));
+    renderModule(mNum);
+  }
+  else if (view === 'scorecard') renderScorecard();
+  else if (view === 'admin') renderAdmin();
+  else if (view === 'facilities') renderFacilities();
+}
+
+function refreshCurrentView() {
+  if (currentView) showView(currentView);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const el = document.getElementById('dashboardContent');
+  const facilityCount = Object.keys(allFacilities).length;
+  const totalMax = getTotalMaxScore();
+
+  if (isAdmin() || isHQ()) {
+    // HQ overview
+    let highPerforming = 0, performing = 0, underPerforming = 0;
+    const facilityScores = Object.values(allFacilities).map(f => {
+      const total = getTotalScore(f.id);
+      const pct = totalMax > 0 ? (total / totalMax) * 100 : 0;
+      if (pct >= 75) highPerforming++;
+      else if (pct >= 50) performing++;
+      else underPerforming++;
+      return { ...f, total, pct };
+    });
+
+    el.innerHTML = `
+      <div style="padding:24px 0 8px; margin-bottom:4px;">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.5rem;margin-bottom:4px;">HQ Live Dashboard</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;">Greater Accra Region · Real-time assessment data across all facilities</p>
+      </div>
+      <div class="dashboard-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Facilities</div><div class="kpi-value blue">${facilityCount}</div><div class="kpi-sub">Enrolled for assessment</div></div>
+        <div class="kpi-card"><div class="kpi-label">High Performing</div><div class="kpi-value green">${highPerforming}</div><div class="kpi-sub">Score ≥ 75%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Performing</div><div class="kpi-value orange">${performing}</div><div class="kpi-sub">Score 50–74%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Under-performing</div><div class="kpi-value red">${underPerforming}</div><div class="kpi-sub">Score < 50%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total Max Score</div><div class="kpi-value blue">${totalMax.toFixed(1)}</div><div class="kpi-sub">Across all 9 modules</div></div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-card"><h3>📊 Facility Performance Distribution</h3><div class="chart-wrap"><canvas id="chartFacilityDist"></canvas></div></div>
+        <div class="chart-card"><h3>🔢 Module Completion Rate</h3><div class="chart-wrap"><canvas id="chartModuleCompletion"></canvas></div></div>
+      </div>
+      <div class="facilities-table">
+        <div class="table-header"><h3>🏥 All Facilities – Live Scores</h3><button class="btn-secondary" onclick="showView('facilities')">Manage Facilities</button></div>
+        <table>
+          <thead><tr><th>#</th><th>Facility</th><th>District</th><th>Type</th><th>Overall Score</th><th>Progress</th><th>Status</th></tr></thead>
+          <tbody id="facilitiesTableBody"></tbody>
+        </table>
+      </div>
+      <div class="live-feed">
+        <div class="live-feed-header"><div class="pulse"></div>Live Score Feed</div>
+        <div id="liveFeedList"></div>
+      </div>`;
+
+    // Render table
+    const tbody = document.getElementById('facilitiesTableBody');
+    if (facilityScores.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">No facilities enrolled yet. Use the Facilities panel to add one.</td></tr>';
+    } else {
+      facilityScores.sort((a, b) => b.pct - a.pct).forEach((f, i) => {
+        const pctStr = f.pct.toFixed(1);
+        const badgeClass = f.pct >= 75 ? 'badge-high' : f.pct >= 50 ? 'badge-mid' : 'badge-low';
+        const badgeText = f.pct >= 75 ? '✓ High' : f.pct >= 50 ? '~ Performing' : '⚠ Under';
+        const fillClass = f.pct >= 75 ? 'perf-high' : f.pct >= 50 ? 'perf-mid' : 'perf-low';
+        tbody.innerHTML += `<tr>
+          <td>${i + 1}</td>
+          <td><strong>${f.name}</strong></td>
+          <td>${f.district || '–'}</td>
+          <td style="font-size:0.78rem;color:var(--text-muted)">${f.type || '–'}</td>
+          <td><strong>${f.total.toFixed(1)}</strong> / ${totalMax.toFixed(1)} <span style="color:var(--text-muted);font-size:0.8rem;">(${pctStr}%)</span></td>
+          <td style="min-width:120px"><div class="performance-bar"><div class="performance-fill ${fillClass}" style="width:${Math.min(f.pct,100)}%"></div></div></td>
+          <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+        </tr>`;
+      });
+    }
+    renderFeedList();
+    setTimeout(() => drawHQCharts(facilityScores), 50);
+
+  } else if (isSupervisor()) {
+    // Supervisor: live module overview for current facility
+    if (!currentFacilityId) {
+      el.innerHTML = renderFacilityPicker('supervisor');
+      return;
+    }
+    const fac = allFacilities[currentFacilityId];
+    const total = getTotalScore(currentFacilityId);
+    const pct = totalMax > 0 ? ((total / totalMax) * 100).toFixed(1) : '0.0';
+
+    el.innerHTML = `
+      <div style="padding:24px 0 8px;">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.5rem;margin-bottom:4px;">Live Supervision Dashboard</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;">${fac?.name || 'Facility'} · ${fac?.district || ''} · Real-time module scores from assessors</p>
+      </div>
+      <div class="dashboard-grid">
+        <div class="kpi-card"><div class="kpi-label">Overall Score</div><div class="kpi-value ${parseFloat(pct)>=75?'green':parseFloat(pct)>=50?'orange':'red'}">${pct}%</div><div class="kpi-sub">${total.toFixed(1)} / ${totalMax.toFixed(1)}</div></div>
+        ${MODULES.slice(0,4).map(m => {
+          const ms = getModuleScore(m.id);
+          const mp = m.maxScore > 0 ? ((ms/m.maxScore)*100).toFixed(0) : 0;
+          return `<div class="kpi-card"><div class="kpi-label">${m.icon} M${m.id}</div><div class="kpi-value ${mp>=75?'green':mp>=50?'orange':'red'}">${mp}%</div><div class="kpi-sub">${ms.toFixed(1)} / ${m.maxScore}</div></div>`;
+        }).join('')}
+      </div>
+      <div class="live-module-grid">${MODULES.map(m => {
+        const ms = getModuleScore(m.id);
+        const mp = m.maxScore > 0 ? ((ms/m.maxScore)*100) : 0;
+        const cls = mp >= 70 ? 'done' : ms > 0 ? 'partial' : '';
+        const col = mp >= 70 ? 'var(--success)' : ms > 0 ? 'var(--warning)' : '#bbb';
+        return `<div class="live-module-tile ${cls}" onclick="showView('module${m.id}')">
+          <div class="tile-head">
+            <div><div class="tile-name">${m.icon} Module ${m.id}</div><div class="tile-assessor" style="margin-top:2px">${m.name}</div></div>
+            <div class="tile-score" style="color:${col}">${mp.toFixed(0)}%</div>
+          </div>
+          <div class="tile-bar"><div class="tile-fill" style="width:${Math.min(mp,100)}%;background:${col}"></div></div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px">${ms.toFixed(1)} / ${m.maxScore} pts</div>
+        </div>`;
+      }).join('')}</div>
+      <div class="chart-card" style="margin-bottom:16px"><h3>Module Score Comparison</h3><div class="chart-wrap"><canvas id="chartModuleRadar"></canvas></div></div>
+      <div class="live-feed"><div class="live-feed-header"><div class="pulse"></div>Live Score Feed from Assessors</div><div id="liveFeedList"></div></div>`;
+
+    renderFeedList();
+    setTimeout(() => drawSupervisorChart(), 50);
+
+  } else if (isAssessor()) {
+    const mNum = getAssessorModule();
+    if (!currentFacilityId) {
+      el.innerHTML = renderFacilityPicker('assessor');
+      return;
+    }
+    const mod = MODULES[mNum - 1];
+    const ms = getModuleScore(mNum);
+    const mp = mod ? ((ms/mod.maxScore)*100).toFixed(1) : '0.0';
+
+    el.innerHTML = `
+      <div style="padding:24px 0 8px;">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.5rem;margin-bottom:4px;">Assessor Dashboard</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;">Your module: <strong>${mod?.name}</strong> · Click the module in the sidebar to start scoring</p>
+      </div>
+      <div class="dashboard-grid">
+        <div class="kpi-card"><div class="kpi-label">My Module Score</div><div class="kpi-value ${parseFloat(mp)>=75?'green':parseFloat(mp)>=50?'orange':'red'}">${mp}%</div><div class="kpi-sub">${ms.toFixed(1)} / ${mod?.maxScore || 0} pts</div></div>
+        <div class="kpi-card"><div class="kpi-label">Items Entered</div><div class="kpi-value blue">${countEnteredItems(mNum)}</div><div class="kpi-sub">of ${mod?.sections.reduce((s,sec)=>s+sec.items.length,0)} items</div></div>
+      </div>
+      <div class="kpi-card" style="max-width:400px;cursor:pointer;margin-bottom:16px" onclick="showView('module${mNum}')">
+        <div class="kpi-label">➡️ Start / Continue Assessment</div>
+        <div style="color:var(--ghs-green);font-weight:700;font-size:1rem;margin-top:8px">${mod?.icon} Module ${mNum}: ${mod?.name}</div>
+        <div style="margin-top:12px"><div class="performance-bar"><div class="performance-fill perf-high" style="width:${Math.min(parseFloat(mp),100)}%"></div></div></div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:6px">${ms.toFixed(1)} / ${mod?.maxScore} · ${mp}% complete</div>
+      </div>`;
+  }
+}
+
+function countEnteredItems(moduleId) {
+  const mScores = allScores[currentFacilityId]?.[moduleId] || {};
+  return Object.values(mScores).filter(v => v !== null && v !== '').length;
+}
+
+function renderFacilityPicker(role) {
+  const facilityOptions = Object.values(allFacilities).map(f => `<option value="${f.id}">${f.name} – ${f.district || ''}</option>`).join('');
+  return `<div class="setup-welcome">
+    <h2>Select Your Facility</h2>
+    <p>Select the healthcare facility you are assessing today to begin.</p>
+    <div style="max-width:400px;margin:0 auto;text-align:left">
+      <div class="form-group"><label>Healthcare Facility</label>
+      <select id="facilityPickerSelect" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem">
+        <option value="">– Select Facility –</option>
+        ${facilityOptions}
+      </select></div>
+      <button class="btn-primary" onclick="selectFacilityFromPicker()">Start Assessment</button>
+      ${role==='supervisor'?`<p style="margin-top:16px;font-size:0.8rem;color:var(--text-muted)">No facility listed? <a href="#" onclick="showView('facilities');return false" style="color:var(--ghs-green)">Enroll a new facility</a> first.</p>`:''}
+    </div>
+  </div>`;
+}
+
+function selectFacilityFromPicker() {
+  const sel = document.getElementById('facilityPickerSelect');
+  if (!sel || !sel.value) { showToast('Please select a facility', 'error'); return; }
+  selectFacility(sel.value);
+}
+
+function selectFacility(id) {
+  currentFacilityId = id;
+  const fac = allFacilities[id];
+  if (fac) {
+    updateFacilityBanner(fac);
+    document.getElementById('facilityBanner').style.display = 'flex';
+    updateNavScores();
+  }
+  refreshCurrentView();
+}
+
+function updateFacilityBanner(fac) {
+  document.getElementById('bannerFacilityName').textContent = fac.name;
+  document.getElementById('bannerFacilityMeta').textContent = (fac.district || '') + ' · ' + (fac.type || '') + ' · Assessment: ' + (fac.date || '–');
+  document.getElementById('facilityBanner').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE RENDERING
+// ═══════════════════════════════════════════════════════════
+function renderModule(mNum) {
+  const mod = MODULES[mNum - 1];
+  if (!mod) return;
+  const el = document.getElementById('moduleContent' + mNum);
+
+  // Access control
+  if (isAssessor() && getAssessorModule() !== mNum) {
+    el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted)">
+      <div style="font-size:3rem;margin-bottom:16px">🔒</div>
+      <h3>Access Restricted</h3>
+      <p>You are assigned to Module ${getAssessorModule()} only.</p>
+    </div>`;
+    return;
+  }
+
+  if (!currentFacilityId) {
+    el.innerHTML = renderFacilityPicker('assessor');
+    return;
+  }
+
+  const totalScore = getModuleScore(mNum);
+  const pct = mod.maxScore > 0 ? ((totalScore / mod.maxScore) * 100).toFixed(1) : '0.0';
+  const canEdit = isAdmin() || isAssessor() && getAssessorModule() === mNum;
+
+  let html = `<div class="module-header">
+    <div>
+      <h2>${mod.icon} Module ${mNum} – ${mod.name}</h2>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">${allFacilities[currentFacilityId]?.name || 'Selected Facility'} · ${canEdit ? '✏️ Assessor View' : '👁 Read-only View'}</div>
+    </div>
+    <div class="module-score-summary">
+      <div class="score-stat"><div class="val">${totalScore.toFixed(1)}</div><div class="lbl">Score</div></div>
+      <div class="score-stat"><div class="val">${mod.maxScore}</div><div class="lbl">Max</div></div>
+      <div class="score-stat"><div class="val">${pct}%</div><div class="lbl">Percentage</div></div>
+    </div>
+  </div>`;
+
+  mod.sections.forEach(sec => {
+    const secScore = sec.items.reduce((s, item) => s + (parseFloat(getItemScore(mNum, item.id)) || 0), 0);
+    const secMax = sec.items.reduce((s, item) => s + item.max, 0);
+    const hasSome = sec.items.some(item => getItemScore(mNum, item.id) !== null);
+
+    html += `<div class="section-card ${hasSome ? 'has-score' : ''}">
+      <div class="section-title">${sec.name}</div>
+      <div class="section-meta">Section Score: <strong>${secScore.toFixed(1)}</strong> / <strong>${secMax.toFixed(1)}</strong></div>`;
+
+    sec.items.forEach(item => {
+      const savedScore = getItemScore(mNum, item.id);
+      const displayVal = savedScore !== null ? savedScore : '';
+      const enteredClass = savedScore !== null ? 'entered' : '';
+      const readonlyAttr = canEdit ? '' : 'readonly style="background:#f8f8f8;cursor:default"';
+
+      html += `<div class="item-row" id="row_${mNum}_${item.id.replace(/\./g,'_')}">
+        <div class="item-info">
+          <div class="item-code">${item.id}</div>
+          <div class="item-name">${item.name}</div>
+          <div class="item-criteria">${item.criteria}</div>
+        </div>
+        <div class="item-score-area">
+          <label>Score / Max</label>
+          <div class="score-input-wrap">
+            <input type="number" class="score-input ${enteredClass}" id="si_${mNum}_${item.id.replace(/\./g,'_')}"
+              value="${displayVal}" min="0" max="${item.max}" step="0.5" placeholder="0"
+              ${readonlyAttr}
+              ${canEdit ? `oninput="onScoreInput(${mNum},'${item.id}',this)"` : ''}>
+          </div>
+          <div class="max-score-label">Max: ${item.max}</div>
+          <div class="save-indicator" id="ind_${mNum}_${item.id.replace(/\./g,'_')}">✓ Saved</div>
+        </div>
+      </div>`;
+    });
+
+    if (canEdit) {
+      html += `<button class="btn-save-section" onclick="saveSection(${mNum},'${sec.id}')">
+        💾 Save Section Scores
+      </button>`;
+    }
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function onScoreInput(moduleId, itemId, input) {
+  const val = parseFloat(input.value);
+  const item = findItem(moduleId, itemId);
+  if (item && val > item.max) {
+    input.value = item.max;
+  }
+  input.classList.add('entered');
+  // Debounced auto-save
+  const key = `${moduleId}_${itemId}`;
+  clearTimeout(autoSaveTimers[key]);
+  autoSaveTimers[key] = setTimeout(() => saveItemScore(moduleId, itemId, parseFloat(input.value) || 0), 800);
+}
+
+function findItem(moduleId, itemId) {
+  const mod = MODULES[moduleId - 1];
+  if (!mod) return null;
+  for (const sec of mod.sections) {
+    const item = sec.items.find(i => i.id === itemId);
+    if (item) return item;
+  }
+  return null;
+}
+
+async function saveItemScore(moduleId, itemId, score) {
+  if (!currentFacilityId) return;
+  const docId = `${currentFacilityId}_m${moduleId}_${itemId.replace(/\./g,'_')}`;
+  try {
+    await db.collection('scores').doc(docId).set({
+      facilityId: currentFacilityId,
+      moduleId,
+      itemId,
+      score,
+      updatedBy: currentUserData.uid,
+      updatedByName: currentUserData.name || currentUserData.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Show saved indicator
+    const ind = document.getElementById(`ind_${moduleId}_${itemId.replace(/\./g,'_')}`);
+    if (ind) { ind.classList.add('show'); setTimeout(() => ind.classList.remove('show'), 2000); }
+    // Push feed
+    addFeedItem(moduleId, itemId, score);
+    updateNavScores();
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+}
+
+async function saveSection(moduleId, sectionId) {
+  if (!currentFacilityId) return;
+  const mod = MODULES[moduleId - 1];
+  if (!mod) return;
+  const sec = mod.sections.find(s => s.id === sectionId);
+  if (!sec) return;
+
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving...';
+
+  let saved = 0;
+  for (const item of sec.items) {
+    const input = document.getElementById(`si_${moduleId}_${item.id.replace(/\./g,'_')}`);
+    if (input) {
+      const score = parseFloat(input.value) || 0;
+      await saveItemScore(moduleId, item.id, score);
+      saved++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '💾 Save Section Scores';
+  showToast(`✓ ${saved} scores saved for ${allFacilities[currentFacilityId]?.name}`, 'success');
+}
+
+async function addFeedItem(moduleId, itemId, score) {
+  const mod = MODULES[moduleId - 1];
+  const item = findItem(moduleId, itemId);
+  if (!mod || !item) return;
+  try {
+    await db.collection('feed').add({
+      facilityId: currentFacilityId,
+      facilityName: allFacilities[currentFacilityId]?.name || 'Unknown',
+      moduleId,
+      moduleName: mod.name,
+      itemId,
+      itemName: item.name.substring(0, 50),
+      score,
+      maxScore: item.max,
+      assessorName: currentUserData.name || currentUserData.email,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) {}
+}
+
+function renderFeedList() {
+  const el = document.getElementById('liveFeedList');
+  if (!el) return;
+  if (liveFeedItems.length === 0) {
+    el.innerHTML = '<div style="padding:16px 18px;color:var(--text-muted);font-size:0.82rem">No activity yet – assessors have not started entering scores.</div>';
+    return;
+  }
+  el.innerHTML = liveFeedItems.slice(0, 15).map(f => {
+    const pct = f.maxScore > 0 ? ((f.score / f.maxScore) * 100).toFixed(0) : 0;
+    const color = pct >= 70 ? '#4caf50' : pct >= 40 ? '#ff9800' : '#f44336';
+    return `<div class="feed-item">
+      <div class="feed-dot" style="background:${color}"></div>
+      <div style="flex:1">
+        <span style="font-weight:600">${f.facilityName}</span> · M${f.moduleId} · ${f.itemId}
+        <span style="color:var(--text-muted)"> – ${f.itemName}</span>
+      </div>
+      <div style="font-weight:700;color:${color}">${f.score} / ${f.maxScore}</div>
+      <div style="font-size:0.72rem;color:var(--text-muted);margin-left:8px">${f.assessorName}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFeedIfVisible() {
+  const el = document.getElementById('liveFeedList');
+  if (el) renderFeedList();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCORECARD
+// ═══════════════════════════════════════════════════════════
+function renderScorecard() {
+  const el = document.getElementById('scorecardContent');
+  const facilityOptions = Object.values(allFacilities).map(f => `<option value="${f.id}" ${f.id === currentFacilityId ? 'selected' : ''}>${f.name}</option>`).join('');
+
+  const fac = currentFacilityId ? allFacilities[currentFacilityId] : null;
+  const totalMax = getTotalMaxScore();
+  const total = fac ? getTotalScore(currentFacilityId) : 0;
+  const totalPct = totalMax > 0 ? ((total / totalMax) * 100).toFixed(1) : '0.0';
+  const perfClass = parseFloat(totalPct) >= 75 ? 'perf-high' : parseFloat(totalPct) >= 50 ? 'perf-mid' : 'perf-low';
+
+  el.innerHTML = `
+    <div class="facility-selector">
+      <label style="font-weight:600;font-size:0.85rem">Select Facility:</label>
+      <select onchange="selectFacility(this.value)">${facilityOptions}</select>
+      <button class="btn-secondary" onclick="printScorecard()">🖨️ Print / Export</button>
+    </div>
+    ${fac ? `
+    <div class="scorecard-wrap" id="scorecardPrint">
+      <div class="scorecard-header">
+        <svg class="scorecard-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#006633"/>
+          <text x="50" y="38" text-anchor="middle" fill="white" font-size="10" font-family="serif" font-weight="bold">GHANA</text>
+          <text x="50" y="50" text-anchor="middle" fill="white" font-size="8" font-family="serif">HEALTH</text>
+          <text x="50" y="61" text-anchor="middle" fill="white" font-size="8" font-family="serif">SERVICE</text>
+          <circle cx="50" cy="22" r="6" fill="#F4A900"/>
+        </svg>
+        <div class="scorecard-title">
+          <h2>${fac.name}</h2>
+          <p>${fac.district || ''} · ${fac.type || ''} · Assessment Date: ${fac.date || '–'}</p>
+          <p style="margin-top:6px;font-weight:600;color:${parseFloat(totalPct)>=75?'var(--success)':parseFloat(totalPct)>=50?'var(--warning)':'var(--danger)'}">
+            ${parseFloat(totalPct) >= 75 ? '★ HIGH PERFORMING' : parseFloat(totalPct) >= 50 ? '◎ PERFORMING' : '⚠ UNDER-PERFORMING'}
+          </p>
+        </div>
+        <div style="margin-left:auto;text-align:center">
+          <div style="width:100px;height:100px;border-radius:50%;border:8px solid ${parseFloat(totalPct)>=75?'var(--success)':parseFloat(totalPct)>=50?'var(--warning)':'var(--danger)'};display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div style="font-size:1.4rem;font-weight:700;color:var(--ghs-green)">${totalPct}%</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">Overall</div>
+          </div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:8px">${total.toFixed(1)} / ${totalMax.toFixed(1)} pts</div>
+        </div>
+      </div>
+      <div class="module-scores-grid">
+        ${MODULES.map(m => {
+          const ms = getModuleScore(m.id);
+          const mp = m.maxScore > 0 ? ((ms/m.maxScore)*100) : 0;
+          const col = mp >= 75 ? '#2e7d32' : mp >= 50 ? '#f57c00' : '#c62828';
+          return `<div class="module-score-card">
+            <div class="m-name">${m.icon} M${m.id}: ${m.name}</div>
+            <div class="m-bar"><div class="m-fill" style="width:${Math.min(mp,100)}%;background:${col}"></div></div>
+            <div class="m-pct">${ms.toFixed(1)} / ${m.maxScore} &nbsp; <strong style="color:${col}">${mp.toFixed(1)}%</strong></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:20px">
+        <canvas id="scorecardChart" height="100"></canvas>
+      </div>
+    </div>` : `<div style="padding:40px;text-align:center;color:var(--text-muted)">Select a facility to view its scorecard</div>`}`;
+
+  if (fac) setTimeout(() => drawScorecardChart(), 80);
+}
+
+function printScorecard() {
+  window.print();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ═══════════════════════════════════════════════════════════
+function renderAdmin() {
+  const el = document.getElementById('adminContent');
+  if (!isAdmin()) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Admin access required.</div>'; return; }
+
+  const usersList = Object.values(allUsers).map(u => `
+    <div class="user-row">
+      <div class="user-avatar">${(u.name||u.email||'?')[0].toUpperCase()}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name || '–'}</div>
+        <div class="user-email">${u.email || u.id}</div>
+      </div>
+      <span class="user-role-tag ${roleClass(u.role)}">${roleLabel(u.role)}</span>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div style="padding:8px 0 20px"><h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.4rem">System Administration</h2></div>
+    <div class="admin-grid">
+      <div class="admin-card">
+        <h3><span>👤</span> User Management</h3>
+        <div style="margin-bottom:16px;display:flex;gap:10px">
+          <button class="btn-primary" style="width:auto" onclick="openModal('createUserModal')">+ Create User Account</button>
+        </div>
+        <div class="users-list">${usersList || '<div style="color:var(--text-muted);font-size:0.85rem">No users yet.</div>'}</div>
+      </div>
+      <div class="admin-card">
+        <h3><span>🔧</span> System Configuration</h3>
+        <div style="background:var(--ghs-light);border-radius:8px;padding:14px;font-size:0.82rem;color:var(--text-muted);line-height:1.8">
+          <strong style="color:var(--text-main)">Firebase Project:</strong> ${JSON.parse(localStorage.getItem('ghsPeerConfig')||'{}').projectId || '–'}<br>
+          <strong style="color:var(--text-main)">Total Users:</strong> ${Object.keys(allUsers).length}<br>
+          <strong style="color:var(--text-main)">Enrolled Facilities:</strong> ${Object.keys(allFacilities).length}<br>
+          <strong style="color:var(--text-main)">Total Max Score:</strong> ${getTotalMaxScore().toFixed(1)}<br>
+          <strong style="color:var(--text-main)">Assessment Modules:</strong> 9
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn-secondary" onclick="resetConfig()">🔄 Reset Firebase Config</button>
+        </div>
+      </div>
+      <div class="admin-card">
+        <h3><span>🏥</span> Quick Module Assignment</h3>
+        <div style="font-size:0.82rem;line-height:2;color:var(--text-muted)">
+          ${MODULES.map(m => `M${m.id} – ${m.name}: <span style="color:var(--ghs-green);font-weight:600">assessor_m${m.id}</span>`).join('<br>')}
+        </div>
+      </div>
+      <div class="admin-card">
+        <h3><span>📋</span> Assessment Summary</h3>
+        <div style="font-size:0.85rem">
+          ${Object.values(allFacilities).slice(0,8).map(f => {
+            const total = getTotalScore(f.id);
+            const pct = ((total/getTotalMaxScore())*100).toFixed(1);
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f4f0">
+              <span style="font-weight:500">${f.name}</span>
+              <span style="color:${parseFloat(pct)>=75?'var(--success)':parseFloat(pct)>=50?'var(--warning)':'var(--danger)'};font-weight:700">${pct}%</span>
+            </div>`;
+          }).join('') || '<div style="color:var(--text-muted)">No facilities enrolled.</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function roleClass(role) {
+  if (role === 'admin') return 'role-admin';
+  if (role === 'hq_director') return 'role-hq';
+  if (role === 'supervisor') return 'role-supervisor';
+  return 'role-assessor';
+}
+
+function resetConfig() {
+  if (confirm('This will clear the Firebase config. You will need to re-enter it. Continue?')) {
+    localStorage.removeItem('ghsPeerConfig');
+    window.location.reload();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// FACILITIES PANEL
+// ═══════════════════════════════════════════════════════════
+function renderFacilities() {
+  const el = document.getElementById('facilitiesContent');
+  const canEnroll = isAdmin() || isSupervisor();
+
+  el.innerHTML = `
+    <div style="padding:8px 0 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.4rem">Healthcare Facilities</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem">Greater Accra Region · ${Object.keys(allFacilities).length} enrolled</p>
+      </div>
+      ${canEnroll ? `<button class="btn-primary" style="width:auto" onclick="openModal('enrollFacilityModal')">+ Enroll Facility</button>` : ''}
+    </div>
+    <div class="facilities-table">
+      <table>
+        <thead><tr><th>Facility Name</th><th>District</th><th>Type</th><th>Date</th><th>Overall Score</th><th>Action</th></tr></thead>
+        <tbody>
+          ${Object.values(allFacilities).map(f => {
+            const total = getTotalScore(f.id);
+            const pct = getTotalMaxScore() > 0 ? ((total/getTotalMaxScore())*100).toFixed(1) : '0.0';
+            return `<tr>
+              <td><strong>${f.name}</strong></td>
+              <td>${f.district || '–'}</td>
+              <td><span style="font-size:0.78rem;color:var(--text-muted)">${f.type || '–'}</span></td>
+              <td style="font-size:0.8rem">${f.date || '–'}</td>
+              <td><strong style="color:${parseFloat(pct)>=75?'var(--success)':parseFloat(pct)>=50?'var(--warning)':'var(--danger)'}">${pct}%</strong> (${total.toFixed(1)} pts)</td>
+              <td><button class="btn-secondary" style="font-size:0.8rem;padding:5px 12px" onclick="selectFacility('${f.id}');showView('dashboard')">Select</button></td>
+            </tr>`;
+          }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">No facilities enrolled yet.</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.getElementById('newUserRole').addEventListener('change', function() {
+  const m = this.value.match(/assessor_m(\d+)/);
+  document.getElementById('newUserModule').value = m ? m[1] : '';
+});
+
+async function createUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const pass = document.getElementById('newUserPass').value;
+  const role = document.getElementById('newUserRole').value;
+
+  if (!name || !email || !pass) { showToast('Please fill all fields', 'error'); return; }
+  if (pass.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
+
+  try {
+    // We use a secondary auth instance approach via REST API to avoid signing out the admin
+    const config = JSON.parse(localStorage.getItem('ghsPeerConfig') || '{}');
+    const resp = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${config.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, returnSecureToken: true })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+
+    // Save user profile
+    await db.collection('users').doc(data.localId).set({ name, email, role, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+    showToast(`✓ User "${name}" created successfully`, 'success');
+    closeModal('createUserModal');
+    document.getElementById('newUserName').value = '';
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserPass').value = '';
+  } catch(e) {
+    showToast('Error creating user: ' + e.message, 'error');
+  }
+}
+
+async function enrollFacility() {
+  const name = document.getElementById('facilityName').value.trim();
+  const district = document.getElementById('facilityDistrict').value.trim();
+  const type = document.getElementById('facilityType').value;
+  const date = document.getElementById('facilityDate').value;
+
+  if (!name) { showToast('Facility name is required', 'error'); return; }
+
+  try {
+    const docRef = await db.collection('facilities').add({
+      name, district, type, date,
+      enrolledBy: currentUserData.uid,
+      enrolledAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`✓ "${name}" enrolled successfully`, 'success');
+    closeModal('enrollFacilityModal');
+    selectFacility(docRef.id);
+    document.getElementById('facilityName').value = '';
+    document.getElementById('facilityDistrict').value = '';
+    document.getElementById('facilityDate').value = '';
+  } catch(e) {
+    showToast('Error enrolling facility: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════
+let charts = {};
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function drawHQCharts(facilityScores) {
+  // Distribution
+  destroyChart('facilityDist');
+  const ctx1 = document.getElementById('chartFacilityDist');
+  if (ctx1) {
+    const high = facilityScores.filter(f => f.pct >= 75).length;
+    const mid = facilityScores.filter(f => f.pct >= 50 && f.pct < 75).length;
+    const low = facilityScores.filter(f => f.pct < 50).length;
+    charts['facilityDist'] = new Chart(ctx1, {
+      type: 'doughnut',
+      data: { labels: ['High Performing (≥75%)', 'Performing (50-74%)', 'Under-performing (<50%)'], datasets: [{ data: [high, mid, low], backgroundColor: ['#2e7d32', '#f57c00', '#c62828'], borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    });
+  }
+
+  // Module completion
+  destroyChart('moduleCompletion');
+  const ctx2 = document.getElementById('chartModuleCompletion');
+  if (ctx2) {
+    charts['moduleCompletion'] = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: MODULES.map(m => 'M' + m.id),
+        datasets: facilityScores.slice(0, 5).map((f, i) => {
+          const colors = ['#006633','#1565C0','#e65100','#6a1b9a','#558b2f'];
+          return {
+            label: f.name.substring(0, 15),
+            data: MODULES.map(m => { const ms = getModuleScoreForFacility(f.id, m.id); return m.maxScore > 0 ? ((ms/m.maxScore)*100).toFixed(1) : 0; }),
+            backgroundColor: colors[i % colors.length] + '99',
+            borderColor: colors[i % colors.length],
+            borderWidth: 1
+          };
+        })
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100, ticks: { callback: v => v + '%' } } }, plugins: { legend: { labels: { font: { size: 10 } } } } }
+    });
+  }
+}
+
+function drawSupervisorChart() {
+  destroyChart('moduleRadar');
+  const ctx = document.getElementById('chartModuleRadar');
+  if (!ctx) return;
+  charts['moduleRadar'] = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: MODULES.map(m => m.name.split(' ').slice(0, 2).join(' ')),
+      datasets: [{
+        label: allFacilities[currentFacilityId]?.name || 'Facility',
+        data: MODULES.map(m => { const ms = getModuleScore(m.id); return m.maxScore > 0 ? ((ms/m.maxScore)*100).toFixed(1) : 0; }),
+        backgroundColor: 'rgba(0,102,51,0.15)',
+        borderColor: '#006633',
+        borderWidth: 2,
+        pointBackgroundColor: '#006633'
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+  });
+}
+
+function drawScorecardChart() {
+  destroyChart('scorecard');
+  const ctx = document.getElementById('scorecardChart');
+  if (!ctx) return;
+  charts['scorecard'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MODULES.map(m => m.icon + ' M' + m.id),
+      datasets: [{
+        label: 'Score %',
+        data: MODULES.map(m => { const ms = getModuleScore(m.id); return m.maxScore > 0 ? ((ms/m.maxScore)*100).toFixed(1) : 0; }),
+        backgroundColor: MODULES.map(m => { const ms = getModuleScore(m.id); const pct = m.maxScore>0?(ms/m.maxScore)*100:0; return pct>=75?'#2e7d32':pct>=50?'#f57c00':'#c62828'; }),
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: { y: { max: 100, ticks: { callback: v => v + '%' } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg, type = '') {
+  const wrap = document.getElementById('toastWrap');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+  wrap.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+</script>
+</body>
+</html>
