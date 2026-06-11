@@ -1694,26 +1694,74 @@ async function addFeedItem(moduleId, itemId, score) {
   } catch(e) {}
 }
 
+// Feed filter state
+let feedFilterFacility = '';
+let feedFilterAssessor = '';
+
 function renderFeedList() {
   const el = document.getElementById('liveFeedList');
   if (!el) return;
-  if (liveFeedItems.length === 0) {
-    el.innerHTML = '<div style="padding:16px 18px;color:var(--text-muted);font-size:0.82rem">No activity yet – assessors have not started entering scores.</div>';
-    return;
-  }
-  el.innerHTML = liveFeedItems.slice(0, 15).map(f => {
-    const pct = f.maxScore > 0 ? ((f.score / f.maxScore) * 100).toFixed(0) : 0;
-    const color = pct >= 70 ? '#4caf50' : pct >= 40 ? '#ff9800' : '#f44336';
-    return `<div class="feed-item">
-      <div class="feed-dot" style="background:${color}"></div>
-      <div style="flex:1">
-        <span style="font-weight:600">${f.facilityName}</span> · M${f.moduleId} · ${f.itemId}
-        <span style="color:var(--text-muted)"> – ${f.itemName}</span>
+
+  // Build unique facility and assessor lists for dropdowns
+  const facilities = [...new Set(liveFeedItems.map(f => f.facilityName).filter(Boolean))].sort();
+  const assessors  = [...new Set(liveFeedItems.map(f => f.assessorName).filter(Boolean))].sort();
+
+  // Apply filters
+  let items = liveFeedItems;
+  if (feedFilterFacility) items = items.filter(f => f.facilityName === feedFilterFacility);
+  if (feedFilterAssessor) items = items.filter(f => f.assessorName === feedFilterAssessor);
+
+  el.innerHTML = `
+    <!-- Search / Filter Bar -->
+    <div style="display:flex;gap:10px;padding:12px 16px;background:#f8fdf8;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center">
+      <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:160px">
+        <span style="font-size:0.8rem;color:var(--text-muted);font-weight:600;white-space:nowrap">🏥 Facility</span>
+        <select onchange="feedFilterFacility=this.value;renderFeedList()"
+          style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.8rem;font-family:'Inter',sans-serif;background:white">
+          <option value="">All Facilities</option>
+          ${facilities.map(f => `<option value="${f}" ${f===feedFilterFacility?'selected':''}>${f}</option>`).join('')}
+        </select>
       </div>
-      <div style="font-weight:700;color:${color}">${f.score} / ${f.maxScore}</div>
-      <div style="font-size:0.72rem;color:var(--text-muted);margin-left:8px">${f.assessorName}</div>
-    </div>`;
-  }).join('');
+      <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:160px">
+        <span style="font-size:0.8rem;color:var(--text-muted);font-weight:600;white-space:nowrap">👤 Assessor</span>
+        <select onchange="feedFilterAssessor=this.value;renderFeedList()"
+          style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:0.8rem;font-family:'Inter',sans-serif;background:white">
+          <option value="">All Assessors</option>
+          ${assessors.map(a => `<option value="${a}" ${a===feedFilterAssessor?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      ${feedFilterFacility || feedFilterAssessor ? `
+      <button onclick="feedFilterFacility='';feedFilterAssessor='';renderFeedList()"
+        style="background:#ffebee;color:var(--danger);border:none;border-radius:6px;padding:6px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap">
+        ✕ Clear
+      </button>` : ''}
+      <span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto;white-space:nowrap">${items.length} entr${items.length===1?'y':'ies'}</span>
+    </div>
+
+    <!-- Feed items -->
+    ${items.length === 0
+      ? `<div style="padding:20px 18px;color:var(--text-muted);font-size:0.82rem;text-align:center">
+          ${liveFeedItems.length === 0
+            ? 'No activity yet – assessors have not started entering scores.'
+            : 'No entries match the selected filters.'}
+        </div>`
+      : items.slice(0, 30).map(f => {
+          const pct = f.maxScore > 0 ? ((f.score / f.maxScore) * 100).toFixed(0) : 0;
+          const color = pct >= 70 ? '#4caf50' : pct >= 40 ? '#ff9800' : '#f44336';
+          return `<div class="feed-item">
+            <div class="feed-dot" style="background:${color}"></div>
+            <div style="flex:1;min-width:0">
+              <span style="font-weight:700;color:var(--ghs-dark)">${f.facilityName}</span>
+              <span style="color:var(--text-muted);font-size:0.78rem"> · M${f.moduleId} · ${f.itemId}</span>
+              <div style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.itemName}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:700;color:${color}">${f.score} / ${f.maxScore}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted)">${f.assessorName}</div>
+            </div>
+          </div>`;
+        }).join('')
+    }`;
 }
 
 function renderFeedIfVisible() {
@@ -1871,6 +1919,7 @@ function resetConfig() {
 function renderFacilities() {
   const el = document.getElementById('facilitiesContent');
   const canEnroll = isAdmin() || isSupervisor();
+  const canDelete = isAdmin() || isSupervisor();
 
   el.innerHTML = `
     <div style="padding:8px 0 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
@@ -1882,23 +1931,45 @@ function renderFacilities() {
     </div>
     <div class="facilities-table">
       <table>
-        <thead><tr><th>Facility Name</th><th>District</th><th>Type</th><th>Date</th><th>Overall Score</th><th>Action</th></tr></thead>
+        <thead><tr><th>Facility Name</th><th>District</th><th>Type</th><th>Date</th><th>Overall Score</th><th>Actions</th></tr></thead>
         <tbody>
           ${Object.values(allFacilities).map(f => {
             const total = getTotalScore(f.id);
             const pct = getTotalMaxScore() > 0 ? ((total/getTotalMaxScore())*100).toFixed(1) : '0.0';
+            const perfColor = parseFloat(pct)>=75?'var(--success)':parseFloat(pct)>=50?'var(--warning)':'var(--danger)';
             return `<tr>
               <td><strong>${f.name}</strong></td>
-              <td>${f.district || '–'}</td>
+              <td>${f.district || '–'}${f.subdistrict ? ' / ' + f.subdistrict : ''}</td>
               <td><span style="font-size:0.78rem;color:var(--text-muted)">${f.type || '–'}</span></td>
               <td style="font-size:0.8rem">${f.date || '–'}</td>
-              <td><strong style="color:${parseFloat(pct)>=75?'var(--success)':parseFloat(pct)>=50?'var(--warning)':'var(--danger)'}">${pct}%</strong> (${total.toFixed(1)} pts)</td>
-              <td><button class="btn-secondary" style="font-size:0.8rem;padding:5px 12px" onclick="selectFacility('${f.id}');showView('dashboard')">Select</button></td>
+              <td><strong style="color:${perfColor}">${pct}%</strong> <span style="color:var(--text-muted);font-size:0.78rem">(${total.toFixed(1)} pts)</span></td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <button style="background:#e8f5e9;color:var(--ghs-green);border:none;border-radius:6px;padding:5px 12px;font-size:0.8rem;font-weight:600;cursor:pointer"
+                    onclick="selectFacility('${f.id}');showView('dashboard')">▶ Select</button>
+                  ${canDelete ? `<button style="background:#ffebee;color:var(--danger);border:none;border-radius:6px;padding:5px 10px;font-size:0.8rem;font-weight:600;cursor:pointer"
+                    onclick="deleteFacility('${f.id}','${f.name.replace(/'/g,"\\'")}')">🗑</button>` : ''}
+                </div>
+              </td>
             </tr>`;
           }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">No facilities enrolled yet.</td></tr>'}
         </tbody>
       </table>
     </div>`;
+}
+
+async function deleteFacility(id, name) {
+  if (!confirm(`Delete "${name}"?\n\nThis will permanently remove the facility. All scores for this facility will remain in the database but will be unlinked.`)) return;
+  try {
+    await db.collection('facilities').doc(id).delete();
+    if (currentFacilityId === id) {
+      currentFacilityId = null;
+      document.getElementById('facilityBanner').style.display = 'none';
+    }
+    showToast(`"${name}" deleted`, 'success');
+  } catch(e) {
+    showToast('Error deleting facility: ' + e.message, 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
