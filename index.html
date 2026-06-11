@@ -987,9 +987,20 @@ function subscribeToData() {
   unsubscribers.push(u2);
 
   // Live feed
-  const u3 = db.collection('feed').orderBy('ts', 'desc').limit(20).onSnapshot(snap => {
+  const u3 = db.collection('feed').orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
     liveFeedItems = [];
-    snap.forEach(doc => liveFeedItems.push({ id: doc.id, ...doc.data() }));
+    snap.docChanges().forEach(change => {
+      if (change.type === 'removed') {
+        liveFeedItems = liveFeedItems.filter(i => i.id !== change.doc.id);
+      }
+    });
+    snap.forEach(doc => {
+      if (!liveFeedItems.find(i => i.id === doc.id)) {
+        liveFeedItems.push({ id: doc.id, ...doc.data() });
+      }
+    });
+    // Re-sort descending by ts
+    liveFeedItems.sort((a,b) => (b.ts?.seconds||0) - (a.ts?.seconds||0));
     renderFeedIfVisible();
   });
   unsubscribers.push(u3);
@@ -1959,15 +1970,46 @@ function renderFacilities() {
 }
 
 async function deleteFacility(id, name) {
-  if (!confirm(`Delete "${name}"?\n\nThis will permanently remove the facility. All scores for this facility will remain in the database but will be unlinked.`)) return;
+  if (!confirm(`Delete "${name}"?\n\nThis will permanently remove:\n• The facility record\n• All assessment scores\n• All live feed entries\n\nThis cannot be undone.`)) return;
+
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
   try {
+    // 1. Delete all scores for this facility
+    const scoreSnap = await db.collection('scores').where('facilityId','==',id).get();
+    const scoreBatch = db.batch();
+    scoreSnap.forEach(doc => scoreBatch.delete(doc.ref));
+    if (!scoreSnap.empty) await scoreBatch.commit();
+
+    // 2. Delete all feed entries for this facility
+    const feedSnap = await db.collection('feed').where('facilityId','==',id).get();
+    const feedBatch = db.batch();
+    feedSnap.forEach(doc => feedBatch.delete(doc.ref));
+    if (!feedSnap.empty) await feedBatch.commit();
+
+    // 3. Remove facility assignment from any users assigned to it
+    const userSnap = await db.collection('users').where('assignedFacilityId','==',id).get();
+    const userBatch = db.batch();
+    userSnap.forEach(doc => userBatch.update(doc.ref, { assignedFacilityId: '', assignedFacilityName: '' }));
+    if (!userSnap.empty) await userBatch.commit();
+
+    // 4. Delete facility document itself
     await db.collection('facilities').doc(id).delete();
+
+    // 5. Clear local state
     if (currentFacilityId === id) {
       currentFacilityId = null;
       document.getElementById('facilityBanner').style.display = 'none';
     }
-    showToast(`"${name}" deleted`, 'success');
+    // Clear local score cache
+    delete allScores[id];
+
+    showToast(`"${name}" and all associated data deleted`, 'success');
   } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🗑';
     showToast('Error deleting facility: ' + e.message, 'error');
   }
 }
@@ -2190,12 +2232,27 @@ function renderTeamRow(u) {
 }
 
 async function deleteUser(uid, name) {
-  if (!confirm(`Remove "${name}" from the system? This cannot be undone.`)) return;
+  if (!confirm(`Remove "${name}" from the system?\n\nThis will permanently remove:\n• Their user profile\n• All scores they submitted\n• All their feed entries\n\nThis cannot be undone.`)) return;
+
   try {
+    // 1. Delete all scores submitted by this user
+    const scoreSnap = await db.collection('scores').where('updatedBy','==',uid).get();
+    const scoreBatch = db.batch();
+    scoreSnap.forEach(doc => scoreBatch.delete(doc.ref));
+    if (!scoreSnap.empty) await scoreBatch.commit();
+
+    // 2. Delete all feed entries by this user
+    const feedSnap = await db.collection('feed').where('assessorName','==',name).get();
+    const feedBatch = db.batch();
+    feedSnap.forEach(doc => feedBatch.delete(doc.ref));
+    if (!feedSnap.empty) await feedBatch.commit();
+
+    // 3. Delete user profile document
     await db.collection('users').doc(uid).delete();
-    showToast(`"${name}" removed`, 'success');
+
+    showToast(`"${name}" and all associated data removed`, 'success');
   } catch(e) {
-    showToast('Error: ' + e.message, 'error');
+    showToast('Error removing user: ' + e.message, 'error');
   }
 }
 
