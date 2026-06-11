@@ -1233,7 +1233,19 @@ function renderDashboard() {
         </table>
       </div>
       <div class="live-feed">
-        <div class="live-feed-header"><div class="pulse"></div>Live Score Feed</div>
+        <div class="live-feed-header">
+          <div class="pulse"></div>Live Score Feed
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button onclick="clearFeedByFilter()" title="Delete filtered entries"
+              style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer">
+              🗑 Delete Filtered
+            </button>
+            <button onclick="clearAllFeed()" title="Clear all feed entries"
+              style="background:rgba(220,53,69,0.7);color:white;border:none;border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer">
+              ✕ Clear All
+            </button>
+          </div>
+        </div>
         <div id="liveFeedList"></div>
       </div>`;
 
@@ -1299,7 +1311,22 @@ function renderDashboard() {
         </div>`;
       }).join('')}</div>
       <div class="chart-card" style="margin-bottom:16px"><h3>Module Score Comparison</h3><div class="chart-wrap"><canvas id="chartModuleRadar"></canvas></div></div>
-      <div class="live-feed"><div class="live-feed-header"><div class="pulse"></div>Live Score Feed from Assessors</div><div id="liveFeedList"></div></div>`;
+      <div class="live-feed">
+        <div class="live-feed-header">
+          <div class="pulse"></div>Live Score Feed from Assessors
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button onclick="clearFeedByFilter()" title="Delete filtered entries"
+              style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer">
+              🗑 Delete Filtered
+            </button>
+            <button onclick="clearAllFeed()" title="Clear all feed entries"
+              style="background:rgba(220,53,69,0.7);color:white;border:none;border-radius:6px;padding:4px 12px;font-size:0.75rem;font-weight:600;cursor:pointer">
+              ✕ Clear All
+            </button>
+          </div>
+        </div>
+        <div id="liveFeedList"></div>
+      </div>`;
 
     renderFeedList();
     setTimeout(() => drawSupervisorChart(), 50);
@@ -1708,6 +1735,62 @@ async function addFeedItem(moduleId, itemId, score) {
 // Feed filter state
 let feedFilterFacility = '';
 let feedFilterAssessor = '';
+
+async function clearAllFeed() {
+  if (!confirm('Clear the entire live feed?\n\nThis deletes all feed entries from the database permanently.')) return;
+  try {
+    const snap = await db.collection('feed').get();
+    if (snap.empty) { showToast('Feed is already empty', ''); return; }
+    // Firestore batch max 500
+    const chunks = [];
+    let batch = db.batch();
+    let count = 0;
+    snap.forEach(doc => {
+      batch.delete(doc.ref);
+      count++;
+      if (count === 500) { chunks.push(batch); batch = db.batch(); count = 0; }
+    });
+    chunks.push(batch);
+    for (const b of chunks) await b.commit();
+    liveFeedItems = [];
+    feedFilterFacility = '';
+    feedFilterAssessor = '';
+    renderFeedIfVisible();
+    showToast('✓ Live feed cleared', 'success');
+  } catch(e) {
+    showToast('Error clearing feed: ' + e.message, 'error');
+  }
+}
+
+async function clearFeedByFilter() {
+  // Determine what's currently filtered
+  const facLabel = feedFilterFacility ? `facility "${feedFilterFacility}"` : '';
+  const assLabel = feedFilterAssessor ? `assessor "${feedFilterAssessor}"` : '';
+  const label = [facLabel, assLabel].filter(Boolean).join(' + ') || 'all entries (no filter active)';
+
+  if (!confirm(`Delete feed entries for ${label}?\n\nThis cannot be undone.`)) return;
+
+  try {
+    let query = db.collection('feed');
+    if (feedFilterFacility) query = query.where('facilityName', '==', feedFilterFacility);
+    // Firestore only supports one equality filter per query without composite index
+    // so if both filters active we filter assessor client-side after fetch
+    const snap = await query.get();
+    let docs = snap.docs;
+    if (feedFilterAssessor) docs = docs.filter(d => d.data().assessorName === feedFilterAssessor);
+
+    if (docs.length === 0) { showToast('No entries matched the current filter', ''); return; }
+
+    const batch = db.batch();
+    docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    showToast(`✓ ${docs.length} feed entr${docs.length===1?'y':'ies'} deleted`, 'success');
+    feedFilterFacility = '';
+    feedFilterAssessor = '';
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
 
 function renderFeedList() {
   const el = document.getElementById('liveFeedList');
