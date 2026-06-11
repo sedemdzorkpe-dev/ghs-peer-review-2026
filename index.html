@@ -433,42 +433,61 @@ tbody tr:hover { background: #f8fdf8; }
 
       <!-- FACILITIES -->
       <div id="view-facilities" class="view-panel"><div id="facilitiesContent"></div></div>
+      <div id="view-team" class="view-panel"><div id="teamContent"></div></div>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Create User -->
+<!-- MODAL: Create / Edit User (Supervisor + Admin) -->
 <div class="modal-overlay" id="createUserModal">
-  <div class="modal">
-    <h3>Create User Account</h3>
-    <p>Add an assessor, supervisor, or director to the system</p>
-    <div class="form-group"><label>Full Name</label><input type="text" id="newUserName" placeholder="Dr. Ama Agyemang"></div>
-    <div class="form-group"><label>Email Address</label><input type="email" id="newUserEmail" placeholder="ama@ghs.gov.gh"></div>
-    <div class="form-group"><label>Temporary Password</label><input type="password" id="newUserPass" placeholder="Min 8 chars"></div>
-    <div class="form-group">
-      <label>Role</label>
-      <select id="newUserRole">
-        <option value="admin">Admin</option>
-        <option value="hq_director">HQ Director</option>
-        <option value="supervisor">Senior Supervisor</option>
-        <option value="assessor_m1">Assessor – Module 1 (Environment)</option>
-        <option value="assessor_m2">Assessor – Module 2 (IPC)</option>
-        <option value="assessor_m3">Assessor – Module 3 (Emergency)</option>
-        <option value="assessor_m4">Assessor – Module 4 (Quality)</option>
-        <option value="assessor_m5">Assessor – Module 5 (Clinical)</option>
-        <option value="assessor_m6">Assessor – Module 6 (Client Care)</option>
-        <option value="assessor_m7">Assessor – Module 7 (OHS)</option>
-        <option value="assessor_m8">Assessor – Module 8 (Governance)</option>
-        <option value="assessor_m9">Assessor – Module 9 (Director's Mark)</option>
-      </select>
+  <div class="modal" style="max-width:600px;width:100%;overflow-y:auto;max-height:92vh">
+    <h3 id="createUserModalTitle">Create User Account</h3>
+    <p id="createUserModalSubtitle">Add a new assessor, supervisor, or director</p>
+    <input type="hidden" id="editUserId" value="">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Full Name</label>
+        <input type="text" id="newUserName" placeholder="e.g. Thomas Mensah">
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="newUserEmail" placeholder="thomas@ghs.gov.gh">
+      </div>
+      <div class="form-group">
+        <label>Password <span id="passHint" style="font-weight:400;color:var(--text-muted);font-size:0.75rem">(min 8 chars)</span></label>
+        <input type="password" id="newUserPass" placeholder="Min 8 characters">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="newUserRole" onchange="onRoleChange()">
+          <option value="assessor">Assessor</option>
+          <option value="supervisor">Senior Supervisor</option>
+          <option value="hq_director">HQ Director</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-group" id="facilityAssignGroup">
+        <label>Assigned Facility</label>
+        <select id="newUserFacility" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:0.88rem;font-family:'Inter',sans-serif">
+          <option value="">&#8211; Any / Not assigned &#8211;</option>
+        </select>
+      </div>
     </div>
-    <div class="form-group">
-      <label>Assigned Module (for Assessors)</label>
-      <input type="text" id="newUserModule" value="" placeholder="auto-filled from role">
+
+    <div id="moduleAssignGroup" style="margin-top:12px">
+      <label style="display:block;font-weight:700;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">
+        Assigned Modules <span style="color:var(--danger)">*</span>
+        <span style="font-weight:400;color:var(--text-muted);font-size:0.75rem;text-transform:none"> &#8212; tick all modules this assessor will score</span>
+      </label>
+      <div id="moduleCheckboxes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
     </div>
+
+    <div id="createUserError" style="display:none;margin-top:12px;color:var(--danger);font-size:0.82rem;background:#ffebee;padding:8px 12px;border-radius:6px"></div>
+
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
-      <button class="btn-primary" onclick="createUser()" style="width:auto">Create Account</button>
+      <button class="btn-primary" id="createUserBtn" onclick="createUser()" style="width:auto">Create Account</button>
     </div>
   </div>
 </div>
@@ -839,6 +858,16 @@ function bootFirebase(config) {
 }
 
 // ─── Auto-load config on startup ───
+// ── Pre-configured Firebase credentials ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDn4zZ2cFlqcWIYyQR0f-iI8LkObu3i-aQ",
+  authDomain: "ghs-peer-review-accra.firebaseapp.com",
+  projectId: "ghs-peer-review-accra",
+  storageBucket: "ghs-peer-review-accra.firebasestorage.app",
+  messagingSenderId: "1091514882273",
+  appId: "1:1091514882273:web:c3742641bd1ccead1c7fa0"
+};
+
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('ghsPeerConfig');
   if (saved) {
@@ -846,10 +875,11 @@ window.addEventListener('DOMContentLoaded', () => {
       const config = JSON.parse(saved);
       bootFirebase(config);
     } catch(e) {
-      showScreen('configScreen');
+      bootFirebase(FIREBASE_CONFIG);
     }
   } else {
-    showScreen('configScreen');
+    // Use pre-configured credentials — skip setup screen
+    bootFirebase(FIREBASE_CONFIG);
   }
 });
 
@@ -981,12 +1011,28 @@ function subscribeToData() {
 function isAdmin() { return currentUserData?.role === 'admin'; }
 function isHQ() { return currentUserData?.role === 'hq_director'; }
 function isSupervisor() { return currentUserData?.role === 'supervisor'; }
-function isAssessor() { return currentUserData?.role?.startsWith('assessor_'); }
-function getAssessorModule() {
-  if (!isAssessor()) return null;
-  const m = currentUserData.role.match(/assessor_m(\d+)/);
-  return m ? parseInt(m[1]) : null;
+function isAssessor() { return currentUserData?.role === 'assessor'; }
+
+// Returns array of assigned module numbers e.g. [4,5,6]
+function getAssessorModules() {
+  if (!isAssessor()) return [];
+  const mods = currentUserData.assignedModules;
+  if (Array.isArray(mods) && mods.length) return mods.map(Number);
+  // Legacy fallback: role was assessor_m3 style
+  const m = (currentUserData.role||'').match(/assessor_m(\d+)/);
+  return m ? [parseInt(m[1])] : [];
 }
+
+// Check if this assessor can score a given module number
+function canScoreModule(mNum) {
+  if (isAdmin() || isSupervisor()) return true;
+  return getAssessorModules().includes(Number(mNum));
+}
+
+function getAssessorFacilityId() {
+  return currentUserData?.assignedFacilityId || null;
+}
+
 function canSeeAllFacilities() { return isAdmin() || isHQ(); }
 function canSeeCurrentFacility() { return isSupervisor() || isAssessor(); }
 
@@ -1003,6 +1049,7 @@ function buildSidebar() {
 
   if (isAdmin() || isHQ() || isSupervisor()) {
     // All modules visible
+    navModulesSection.textContent = 'Assessment Modules';
     MODULES.forEach(m => {
       const div = document.createElement('div');
       div.className = 'nav-item';
@@ -1012,17 +1059,18 @@ function buildSidebar() {
       navModules.appendChild(div);
     });
   } else if (isAssessor()) {
-    const mNum = getAssessorModule();
-    navModulesSection.textContent = 'My Module';
-    if (mNum) {
+    const myModules = getAssessorModules();
+    navModulesSection.textContent = myModules.length > 1 ? 'My Modules' : 'My Module';
+    myModules.forEach(mNum => {
       const m = MODULES[mNum - 1];
+      if (!m) return;
       const div = document.createElement('div');
       div.className = 'nav-item';
       div.dataset.view = 'module' + mNum;
       div.onclick = () => showView('module' + mNum);
-      div.innerHTML = `<span class="nav-icon">${m.icon}</span><span>Module ${mNum}: ${m.name.split(' ')[0]}</span><span class="nav-score-pill empty" id="navPill${mNum}">–</span>`;
+      div.innerHTML = `<span class="nav-icon">${m.icon}</span><span>M${mNum}: ${m.name.split(' ').slice(0,2).join(' ')}</span><span class="nav-score-pill empty" id="navPill${mNum}">–</span>`;
       navModules.appendChild(div);
-    }
+    });
   }
 
   // Scorecard for supervisors and above
@@ -1035,17 +1083,23 @@ function buildSidebar() {
     navModules.appendChild(sc);
   }
 
-  // Admin items
+  // Admin items — supervisors can now manage team
   if (isAdmin() || isSupervisor()) {
     navAdminSection.style.display = 'block';
-    if (isSupervisor() || isAdmin()) {
-      const f = document.createElement('div');
-      f.className = 'nav-item';
-      f.dataset.view = 'facilities';
-      f.onclick = () => showView('facilities');
-      f.innerHTML = `<span class="nav-icon">🏥</span><span>Facilities</span>`;
-      navAdmin.appendChild(f);
-    }
+    const f = document.createElement('div');
+    f.className = 'nav-item';
+    f.dataset.view = 'facilities';
+    f.onclick = () => showView('facilities');
+    f.innerHTML = `<span class="nav-icon">🏥</span><span>Facilities</span>`;
+    navAdmin.appendChild(f);
+
+    const tm = document.createElement('div');
+    tm.className = 'nav-item';
+    tm.dataset.view = 'team';
+    tm.onclick = () => showView('team');
+    tm.innerHTML = `<span class="nav-icon">👥</span><span>Team</span>`;
+    navAdmin.appendChild(tm);
+
     if (isAdmin()) {
       const a = document.createElement('div');
       a.className = 'nav-item';
@@ -1117,6 +1171,7 @@ function showView(view) {
   else if (view === 'scorecard') renderScorecard();
   else if (view === 'admin') renderAdmin();
   else if (view === 'facilities') renderFacilities();
+  else if (view === 'team') renderTeam();
 }
 
 function refreshCurrentView() {
@@ -1239,29 +1294,47 @@ function renderDashboard() {
     setTimeout(() => drawSupervisorChart(), 50);
 
   } else if (isAssessor()) {
-    const mNum = getAssessorModule();
+    const myModules = getAssessorModules();
+    const assignedFacName = currentUserData.assignedFacilityName || (currentUserData.assignedFacilityId && allFacilities[currentUserData.assignedFacilityId]?.name) || '';
+
+    // Auto-select assigned facility
+    if (!currentFacilityId && currentUserData.assignedFacilityId && allFacilities[currentUserData.assignedFacilityId]) {
+      selectFacility(currentUserData.assignedFacilityId);
+    }
+
     if (!currentFacilityId) {
       el.innerHTML = renderFacilityPicker('assessor');
       return;
     }
-    const mod = MODULES[mNum - 1];
-    const ms = getModuleScore(mNum);
-    const mp = mod ? ((ms/mod.maxScore)*100).toFixed(1) : '0.0';
+
+    const facName = allFacilities[currentFacilityId]?.name || assignedFacName || 'Selected Facility';
 
     el.innerHTML = `
       <div style="padding:24px 0 8px;">
         <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.5rem;margin-bottom:4px;">Assessor Dashboard</h2>
-        <p style="color:var(--text-muted);font-size:0.85rem;">Your module: <strong>${mod?.name}</strong> · Click the module in the sidebar to start scoring</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;">👋 Welcome, <strong>${currentUserData.name || ''}</strong> &nbsp;·&nbsp; 🏥 ${facName}</p>
       </div>
+      ${assignedFacName ? `<div style="background:#e8f5e9;border-left:4px solid var(--ghs-green);padding:10px 16px;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:0.85rem">
+        <strong>Your assigned facility:</strong> ${assignedFacName}
+        ${currentFacilityId !== currentUserData.assignedFacilityId
+          ? `&nbsp;<a href="#" onclick="selectFacility('${currentUserData.assignedFacilityId}');return false" style="color:var(--ghs-green);font-weight:600">Switch to it</a>` : ''}
+      </div>` : ''}
       <div class="dashboard-grid">
-        <div class="kpi-card"><div class="kpi-label">My Module Score</div><div class="kpi-value ${parseFloat(mp)>=75?'green':parseFloat(mp)>=50?'orange':'red'}">${mp}%</div><div class="kpi-sub">${ms.toFixed(1)} / ${mod?.maxScore || 0} pts</div></div>
-        <div class="kpi-card"><div class="kpi-label">Items Entered</div><div class="kpi-value blue">${countEnteredItems(mNum)}</div><div class="kpi-sub">of ${mod?.sections.reduce((s,sec)=>s+sec.items.length,0)} items</div></div>
-      </div>
-      <div class="kpi-card" style="max-width:400px;cursor:pointer;margin-bottom:16px" onclick="showView('module${mNum}')">
-        <div class="kpi-label">➡️ Start / Continue Assessment</div>
-        <div style="color:var(--ghs-green);font-weight:700;font-size:1rem;margin-top:8px">${mod?.icon} Module ${mNum}: ${mod?.name}</div>
-        <div style="margin-top:12px"><div class="performance-bar"><div class="performance-fill perf-high" style="width:${Math.min(parseFloat(mp),100)}%"></div></div></div>
-        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:6px">${ms.toFixed(1)} / ${mod?.maxScore} · ${mp}% complete</div>
+        ${myModules.map(mNum => {
+          const mod = MODULES[mNum-1];
+          const ms = getModuleScore(mNum);
+          const mp = mod ? ((ms/mod.maxScore)*100).toFixed(1) : '0.0';
+          const entered = countEnteredItems(mNum);
+          const total = mod?.sections.reduce((s,sec)=>s+sec.items.length,0) || 0;
+          return `<div class="kpi-card" style="cursor:pointer;border:2px solid transparent;transition:border-color 0.2s" onclick="showView('module${mNum}')"
+            onmouseover="this.style.borderColor='var(--ghs-green)'" onmouseout="this.style.borderColor='transparent'">
+            <div class="kpi-label">${mod?.icon} Module ${mNum}</div>
+            <div class="kpi-value ${parseFloat(mp)>=75?'green':parseFloat(mp)>=50?'orange':'red'}">${mp}%</div>
+            <div class="kpi-sub">${ms.toFixed(1)} / ${mod?.maxScore} pts</div>
+            <div style="margin-top:10px"><div class="performance-bar"><div class="performance-fill ${parseFloat(mp)>=75?'perf-high':parseFloat(mp)>=50?'perf-mid':'perf-low'}" style="width:${Math.min(parseFloat(mp),100)}%"></div></div></div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">${entered} of ${total} items entered &nbsp;·&nbsp; ➡️ Click to score</div>
+          </div>`;
+        }).join('')}
       </div>`;
   }
 }
@@ -1272,26 +1345,157 @@ function countEnteredItems(moduleId) {
 }
 
 function renderFacilityPicker(role) {
-  const facilityOptions = Object.values(allFacilities).map(f => `<option value="${f.id}">${f.name} – ${f.district || ''}</option>`).join('');
-  return `<div class="setup-welcome">
-    <h2>Select Your Facility</h2>
-    <p>Select the healthcare facility you are assessing today to begin.</p>
-    <div style="max-width:400px;margin:0 auto;text-align:left">
-      <div class="form-group"><label>Healthcare Facility</label>
-      <select id="facilityPickerSelect" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem">
-        <option value="">– Select Facility –</option>
+  const facilityOptions = Object.values(allFacilities).map(f =>
+    `<option value="${f.id}">${f.name}${f.district ? ' – ' + f.district : ''}</option>`
+  ).join('');
+
+  const hasExisting = Object.keys(allFacilities).length > 0;
+
+  return `<div style="padding:32px 24px;max-width:560px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:2.2rem;margin-bottom:10px">🏥</div>
+      <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.6rem;margin-bottom:6px">Set Your Facility</h2>
+      <p style="color:var(--text-muted);font-size:0.88rem">Enter the facility you are assessing today, then begin your assessment.</p>
+    </div>
+
+    ${hasExisting ? `
+    <div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:16px 20px;margin-bottom:20px">
+      <div style="font-weight:700;font-size:0.82rem;color:var(--ghs-green);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">📋 Previously Enrolled Facilities</div>
+      <select id="facilityPickerExisting" style="width:100%;padding:10px 12px;border:1.5px solid #a5d6a7;border-radius:7px;font-size:0.9rem;font-family:'Inter',sans-serif;background:white;color:var(--text-main)" onchange="prefillFromExisting(this.value)">
+        <option value="">– Select an existing facility –</option>
         ${facilityOptions}
-      </select></div>
-      <button class="btn-primary" onclick="selectFacilityFromPicker()">Start Assessment</button>
-      ${role==='supervisor'?`<p style="margin-top:16px;font-size:0.8rem;color:var(--text-muted)">No facility listed? <a href="#" onclick="showView('facilities');return false" style="color:var(--ghs-green)">Enroll a new facility</a> first.</p>`:''}
+      </select>
+      <div style="font-size:0.75rem;color:#2e7d32;margin-top:6px">Selecting above will pre-fill the form below</div>
+    </div>
+    <div style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-bottom:16px">─── or enter a new facility below ───</div>
+    ` : ''}
+
+    <div style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:24px">
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="display:block;font-weight:700;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Facility Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="fpName" placeholder="e.g. Ridge Hospital, Tema General Hospital"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.92rem;font-family:'Inter',sans-serif"
+          oninput="this.style.borderColor=this.value?'var(--ghs-green)':'var(--border)'">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="form-group">
+          <label style="display:block;font-weight:700;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">District / Metro</label>
+          <input type="text" id="fpDistrict" placeholder="e.g. Ayawaso West"
+            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:'Inter',sans-serif"
+            oninput="this.style.borderColor=this.value?'var(--ghs-green)':'var(--border)'">
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:700;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Sub-district / Zone</label>
+          <input type="text" id="fpSubdistrict" placeholder="e.g. Cantonments"
+            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:'Inter',sans-serif"
+            oninput="this.style.borderColor=this.value?'var(--ghs-green)':'var(--border)'">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div class="form-group">
+          <label style="display:block;font-weight:700;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Facility Type</label>
+          <select id="fpType" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;font-family:'Inter',sans-serif;background:white">
+            <option>Regional Hospital</option>
+            <option>District Hospital</option>
+            <option>Polyclinic</option>
+            <option>Health Centre</option>
+            <option>CHPS Compound</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:700;font-size:0.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Assessment Date</label>
+          <input type="date" id="fpDate" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;font-family:'Inter',sans-serif"
+            value="${new Date().toISOString().split('T')[0]}">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="fpStartBtn" onclick="startAssessmentFromPicker()" style="font-size:0.95rem;padding:13px 24px;display:flex;align-items:center;justify-content:center;gap:8px">
+        ▶ Start Assessment
+      </button>
+      <div id="fpError" style="display:none;margin-top:10px;color:var(--danger);font-size:0.82rem;background:#ffebee;padding:8px 12px;border-radius:6px"></div>
     </div>
   </div>`;
 }
 
-function selectFacilityFromPicker() {
-  const sel = document.getElementById('facilityPickerSelect');
-  if (!sel || !sel.value) { showToast('Please select a facility', 'error'); return; }
-  selectFacility(sel.value);
+function prefillFromExisting(facilityId) {
+  if (!facilityId) return;
+  const fac = allFacilities[facilityId];
+  if (!fac) return;
+  const nameEl = document.getElementById('fpName');
+  const distEl = document.getElementById('fpDistrict');
+  const subEl  = document.getElementById('fpSubdistrict');
+  const typeEl = document.getElementById('fpType');
+  const dateEl = document.getElementById('fpDate');
+  if (nameEl) { nameEl.value = fac.name || ''; nameEl.style.borderColor = fac.name ? 'var(--ghs-green)' : 'var(--border)'; }
+  if (distEl) { distEl.value = fac.district || ''; distEl.style.borderColor = fac.district ? 'var(--ghs-green)' : 'var(--border)'; }
+  if (subEl)  { subEl.value  = fac.subdistrict || ''; }
+  if (typeEl) { typeEl.value = fac.type || 'Regional Hospital'; }
+  if (dateEl) { dateEl.value = fac.date || new Date().toISOString().split('T')[0]; }
+  // Store the existing id so we reuse it instead of creating a duplicate
+  document.getElementById('fpStartBtn').dataset.existingId = facilityId;
+}
+
+async function startAssessmentFromPicker() {
+  const nameEl = document.getElementById('fpName');
+  const distEl = document.getElementById('fpDistrict');
+  const subEl  = document.getElementById('fpSubdistrict');
+  const typeEl = document.getElementById('fpType');
+  const dateEl = document.getElementById('fpDate');
+  const errEl  = document.getElementById('fpError');
+  const btn    = document.getElementById('fpStartBtn');
+  const existingId = btn?.dataset?.existingId || '';
+
+  const name       = nameEl?.value.trim();
+  const district   = distEl?.value.trim();
+  const subdistrict = subEl?.value.trim();
+  const type       = typeEl?.value;
+  const date       = dateEl?.value;
+
+  if (!name) {
+    errEl.textContent = 'Please enter the facility name.';
+    errEl.style.display = 'block';
+    nameEl.style.borderColor = 'var(--danger)';
+    nameEl.focus();
+    return;
+  }
+
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving…';
+
+  try {
+    let facilityId = existingId;
+
+    if (existingId) {
+      // Update existing record with latest details
+      await db.collection('facilities').doc(existingId).update({ name, district, subdistrict, type, date });
+    } else {
+      // Check for an exact name match to avoid duplicates
+      const snap = await db.collection('facilities').where('name', '==', name).limit(1).get();
+      if (!snap.empty) {
+        facilityId = snap.docs[0].id;
+        await db.collection('facilities').doc(facilityId).update({ district, subdistrict, type, date });
+      } else {
+        const docRef = await db.collection('facilities').add({
+          name, district, subdistrict, type, date,
+          enrolledBy: currentUserData.uid,
+          enrolledAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        facilityId = docRef.id;
+      }
+    }
+
+    showToast(`✓ Facility set: ${name}`, 'success');
+    btn.disabled = false;
+    btn.innerHTML = '▶ Start Assessment';
+    selectFacility(facilityId);
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Start Assessment';
+    errEl.textContent = 'Error saving facility: ' + e.message;
+    errEl.style.display = 'block';
+  }
 }
 
 function selectFacility(id) {
@@ -1320,11 +1524,12 @@ function renderModule(mNum) {
   const el = document.getElementById('moduleContent' + mNum);
 
   // Access control
-  if (isAssessor() && getAssessorModule() !== mNum) {
+  if (isAssessor() && !canScoreModule(mNum)) {
+    const myMods = getAssessorModules();
     el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted)">
       <div style="font-size:3rem;margin-bottom:16px">🔒</div>
       <h3>Access Restricted</h3>
-      <p>You are assigned to Module ${getAssessorModule()} only.</p>
+      <p>You are assigned to Module${myMods.length>1?'s':''} <strong>${myMods.join(', ')}</strong> only.</p>
     </div>`;
     return;
   }
@@ -1336,7 +1541,7 @@ function renderModule(mNum) {
 
   const totalScore = getModuleScore(mNum);
   const pct = mod.maxScore > 0 ? ((totalScore / mod.maxScore) * 100).toFixed(1) : '0.0';
-  const canEdit = isAdmin() || isAssessor() && getAssessorModule() === mNum;
+  const canEdit = isAdmin() || isSupervisor() || (isAssessor() && canScoreModule(mNum));
 
   let html = `<div class="module-header">
     <div>
@@ -1607,7 +1812,7 @@ function renderAdmin() {
       <div class="admin-card">
         <h3><span>👤</span> User Management</h3>
         <div style="margin-bottom:16px;display:flex;gap:10px">
-          <button class="btn-primary" style="width:auto" onclick="openModal('createUserModal')">+ Create User Account</button>
+          <button class="btn-primary" style="width:auto" onclick="openCreateUserModal()">+ Create User Account</button>
         </div>
         <div class="users-list">${usersList || '<div style="color:var(--text-muted);font-size:0.85rem">No users yet.</div>'}</div>
       </div>
@@ -1702,41 +1907,224 @@ function renderFacilities() {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-document.getElementById('newUserRole').addEventListener('change', function() {
-  const m = this.value.match(/assessor_m(\d+)/);
-  document.getElementById('newUserModule').value = m ? m[1] : '';
-});
+// ═══════════════════════════════════════════════════════════
+// USER CREATION MODAL — role/module/facility logic
+// ═══════════════════════════════════════════════════════════
+
+function onRoleChange() {
+  const role = document.getElementById('newUserRole').value;
+  const moduleGroup = document.getElementById('moduleAssignGroup');
+  const facilityGroup = document.getElementById('facilityAssignGroup');
+  moduleGroup.style.display = role === 'assessor' ? 'block' : 'none';
+  facilityGroup.style.display = (role === 'assessor' || role === 'supervisor') ? 'block' : 'none';
+}
+
+function populateCreateUserModal(editUser = null) {
+  // Reset
+  document.getElementById('editUserId').value = editUser ? editUser.id : '';
+  document.getElementById('newUserName').value = editUser ? (editUser.name||'') : '';
+  document.getElementById('newUserEmail').value = editUser ? (editUser.email||'') : '';
+  document.getElementById('newUserPass').value = '';
+  document.getElementById('createUserError').style.display = 'none';
+  document.getElementById('newUserRole').value = editUser ? (editUser.role||'assessor') : 'assessor';
+
+  const isEdit = !!editUser;
+  document.getElementById('createUserModalTitle').textContent = isEdit ? 'Edit User Account' : 'Create User Account';
+  document.getElementById('createUserModalSubtitle').textContent = isEdit ? `Editing: ${editUser.name}` : 'Add a new assessor, supervisor, or director';
+  document.getElementById('createUserBtn').textContent = isEdit ? 'Save Changes' : 'Create Account';
+  document.getElementById('passHint').textContent = isEdit ? '(leave blank to keep current)' : '(min 8 chars)';
+
+  // Populate facility dropdown
+  const facSel = document.getElementById('newUserFacility');
+  facSel.innerHTML = '<option value="">– Any / Not assigned –</option>';
+  Object.values(allFacilities).forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    opt.textContent = f.name + (f.district ? ' – ' + f.district : '');
+    if (editUser && editUser.assignedFacilityId === f.id) opt.selected = true;
+    facSel.appendChild(opt);
+  });
+
+  // Build module checkboxes
+  const box = document.getElementById('moduleCheckboxes');
+  box.innerHTML = MODULES.map(m => {
+    const checked = editUser && Array.isArray(editUser.assignedModules) && editUser.assignedModules.includes(m.id) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;background:#f0f7f0;border-radius:7px;padding:8px 10px;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.15s"
+      onmouseover="this.style.borderColor='var(--ghs-green)'" onmouseout="this.style.borderColor='transparent'">
+      <input type="checkbox" name="modCheck" value="${m.id}" ${checked}
+        style="width:16px;height:16px;accent-color:var(--ghs-green);cursor:pointer">
+      <span style="font-size:0.82rem;font-weight:600">${m.icon} M${m.id}: ${m.name.split(' ').slice(0,3).join(' ')}</span>
+    </label>`;
+  }).join('');
+
+  onRoleChange();
+}
+
+function openCreateUserModal(editUser = null) {
+  populateCreateUserModal(editUser);
+  openModal('createUserModal');
+}
 
 async function createUser() {
+  const editUserId = document.getElementById('editUserId').value;
   const name = document.getElementById('newUserName').value.trim();
   const email = document.getElementById('newUserEmail').value.trim();
   const pass = document.getElementById('newUserPass').value;
   const role = document.getElementById('newUserRole').value;
+  const assignedFacilityId = document.getElementById('newUserFacility').value;
+  const errEl = document.getElementById('createUserError');
+  const btn = document.getElementById('createUserBtn');
+  errEl.style.display = 'none';
 
-  if (!name || !email || !pass) { showToast('Please fill all fields', 'error'); return; }
-  if (pass.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
+  // Collect checked modules
+  const checkedBoxes = document.querySelectorAll('#moduleCheckboxes input[name="modCheck"]:checked');
+  const assignedModules = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+  // Validate
+  if (!name || !email) { errEl.textContent = 'Name and email are required.'; errEl.style.display='block'; return; }
+  if (!editUserId && pass.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display='block'; return; }
+  if (role === 'assessor' && assignedModules.length === 0) { errEl.textContent = 'Please select at least one module for this assessor.'; errEl.style.display='block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving…';
 
   try {
-    // We use a secondary auth instance approach via REST API to avoid signing out the admin
     const config = JSON.parse(localStorage.getItem('ghsPeerConfig') || '{}');
-    const resp = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${config.apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass, returnSecureToken: true })
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error.message);
+    let uid = editUserId;
 
-    // Save user profile
-    await db.collection('users').doc(data.localId).set({ name, email, role, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    if (!editUserId) {
+      // Create new Firebase Auth account via REST (keeps admin signed in)
+      const resp = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${config.apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass, returnSecureToken: true })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      uid = data.localId;
+    } else if (pass.length >= 8) {
+      // Update password via REST
+      const token = await currentUser.getIdToken();
+      await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${config.apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token, localId: uid, password: pass })
+      });
+    }
 
-    showToast(`✓ User "${name}" created successfully`, 'success');
+    // Build profile object
+    const profile = {
+      name, email, role,
+      assignedModules: role === 'assessor' ? assignedModules : [],
+      assignedFacilityId: (role === 'assessor' || role === 'supervisor') ? assignedFacilityId : '',
+      assignedFacilityName: (role === 'assessor' || role === 'supervisor') && assignedFacilityId
+        ? (allFacilities[assignedFacilityId]?.name || '')
+        : '',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!editUserId) profile.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+    await db.collection('users').doc(uid).set(profile, { merge: true });
+
+    const action = editUserId ? 'updated' : 'created';
+    showToast(`✓ "${name}" ${action} successfully`, 'success');
     closeModal('createUserModal');
-    document.getElementById('newUserName').value = '';
-    document.getElementById('newUserEmail').value = '';
-    document.getElementById('newUserPass').value = '';
+    btn.disabled = false;
+    btn.textContent = editUserId ? 'Save Changes' : 'Create Account';
   } catch(e) {
-    showToast('Error creating user: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = editUserId ? 'Save Changes' : 'Create Account';
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TEAM PANEL — Supervisor & Admin manage assessors
+// ═══════════════════════════════════════════════════════════
+function renderTeam() {
+  const el = document.getElementById('teamContent');
+  if (!isAdmin() && !isSupervisor()) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Access restricted.</div>';
+    return;
+  }
+
+  const assessors = Object.values(allUsers).filter(u => u.role === 'assessor' || u.role?.startsWith('assessor_m'));
+  const others = Object.values(allUsers).filter(u => u.role !== 'assessor' && !u.role?.startsWith('assessor_m') && u.id !== currentUserData.uid);
+
+  el.innerHTML = `
+    <div style="padding:8px 0 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-family:'Playfair Display',serif;color:var(--ghs-green);font-size:1.4rem">Assessment Team</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem">Manage assessors, assign modules and facilities</p>
+      </div>
+      <button class="btn-primary" style="width:auto" onclick="openCreateUserModal()">+ Add Team Member</button>
+    </div>
+
+    <div style="background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px">
+      <div style="padding:14px 20px;background:var(--ghs-light);border-bottom:1px solid var(--border);font-weight:700;font-size:0.88rem;color:var(--ghs-dark)">
+        📋 Assessors (${assessors.length})
+      </div>
+      ${assessors.length === 0
+        ? '<div style="padding:28px;text-align:center;color:var(--text-muted);font-size:0.85rem">No assessors yet. Click "+ Add Team Member" to create one.</div>'
+        : assessors.map(u => renderTeamRow(u)).join('')
+      }
+    </div>
+
+    ${others.length ? `
+    <div style="background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden">
+      <div style="padding:14px 20px;background:var(--ghs-light);border-bottom:1px solid var(--border);font-weight:700;font-size:0.88rem;color:var(--ghs-dark)">
+        👤 Supervisors & Directors (${others.length})
+      </div>
+      ${others.map(u => renderTeamRow(u)).join('')}
+    </div>` : ''}
+  `;
+}
+
+function renderTeamRow(u) {
+  const mods = Array.isArray(u.assignedModules) && u.assignedModules.length
+    ? u.assignedModules.map(m => `<span style="background:#e8f5e9;color:var(--ghs-green);font-size:0.7rem;padding:2px 7px;border-radius:10px;font-weight:700">M${m}</span>`).join(' ')
+    : '<span style="color:var(--text-muted);font-size:0.78rem">No modules</span>';
+  const facName = u.assignedFacilityName || (u.assignedFacilityId && allFacilities[u.assignedFacilityId]?.name) || '';
+
+  return `<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid #f4f7f4;flex-wrap:wrap">
+    <div style="width:40px;height:40px;background:var(--ghs-green);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.95rem;flex-shrink:0">
+      ${(u.name||u.email||'?')[0].toUpperCase()}
+    </div>
+    <div style="flex:1;min-width:160px">
+      <div style="font-weight:700;font-size:0.92rem">${u.name || '–'}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">${u.email || u.id}</div>
+    </div>
+    <div style="min-width:120px">
+      <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em">Modules</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${mods}</div>
+    </div>
+    <div style="min-width:140px">
+      <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em">Facility</div>
+      <div style="font-size:0.8rem;font-weight:${facName?'600':'400'};color:${facName?'var(--ghs-dark)':'var(--text-muted)'}">
+        ${facName || '– Not assigned –'}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="openCreateUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})"
+        style="background:#e8f5e9;color:var(--ghs-green);border:none;border-radius:6px;padding:6px 14px;font-size:0.8rem;font-weight:600;cursor:pointer">
+        ✏️ Edit
+      </button>
+      ${isAdmin() ? `<button onclick="deleteUser('${u.id}','${(u.name||'').replace(/'/g,"\\'")}') "
+        style="background:#ffebee;color:var(--danger);border:none;border-radius:6px;padding:6px 14px;font-size:0.8rem;font-weight:600;cursor:pointer">
+        🗑
+      </button>` : ''}
+    </div>
+  </div>`;
+}
+
+async function deleteUser(uid, name) {
+  if (!confirm(`Remove "${name}" from the system? This cannot be undone.`)) return;
+  try {
+    await db.collection('users').doc(uid).delete();
+    showToast(`"${name}" removed`, 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
   }
 }
 
